@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { auth, db } from '../firebase';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { apiFetch } from '../services/api';
 import colors from '../theme/colors';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -25,38 +25,51 @@ const NotificationsScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadNotifications();
-  }, []);
-
-  const loadNotifications = async () => {
-    try {
-      setLoading(true);
-      const res = await apiFetch('/api/notifications');
-      if (!res.ok) {
-        console.log('[NOTIFICATIONS_LOAD_ERROR]', res.status);
-        setNotifications([]);
-        return;
-      }
-      const data = await res.json();
-      setNotifications(data);
-    } catch (e) {
-      console.log('[NOTIFICATIONS_LOAD_EXCEPTION]', e);
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
       setNotifications([]);
-    } finally {
       setLoading(false);
+      return;
     }
-  };
+
+    setLoading(true);
+    const unsubscribe = db.collection('notifications')
+      .where('userId', '==', currentUser.uid)
+      .orderBy('createdAt', 'desc')
+      .onSnapshot(snapshot => {
+        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        setNotifications(list);
+        setLoading(false);
+      }, e => {
+        console.log('[NOTIFICATIONS_LOAD_EXCEPTION]', e);
+        setNotifications([]);
+        setLoading(false);
+      });
+
+    return () => unsubscribe();
+  }, []);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAllAsRead = async () => {
     try {
-      const res = await apiFetch('/api/notifications/mark-all-read', {
-        method: 'PUT',
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+
+      const batch = db.batch();
+      const unreadSnapshot = await db.collection('notifications')
+        .where('userId', '==', currentUser.uid)
+        .where('read', '==', false)
+        .get();
+
+      unreadSnapshot.docs.forEach(doc => {
+        batch.update(doc.ref, { read: true });
       });
-      if (res.ok) {
-        setNotifications(notifications.map((n) => ({ ...n, read: true })));
-      }
+
+      await batch.commit();
+
+      // optimistic update (will also be updated by onSnapshot)
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     } catch (e) {
       console.log('[MARK_ALL_READ_ERROR]', e);
     }

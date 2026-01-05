@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RootStackParamList } from '../navigation/AppNavigator';
 import Button from '../components/ui/button';
-import colors from '../theme/colors';
 import { auth, db } from '../firebase';
+import { RootStackParamList } from '../navigation/AppNavigator';
+import colors from '../theme/colors';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type RouteProps = RouteProp<RootStackParamList, 'BookingDetail'>;
@@ -36,27 +36,26 @@ const BookingDetailScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadDetail = async () => {
-      try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-          console.log('[BOOKING_DETAIL_USER_NOT_LOGGED_IN]');
-          setBooking(null);
-          setLoading(false);
-          return;
-        }
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.log('[BOOKING_DETAIL_USER_NOT_LOGGED_IN]');
+      setBooking(null);
+      setLoading(false);
+      return;
+    }
 
-        const bookingDoc = await db.collection('bookings').doc(id).get();
-        if (!bookingDoc.exists) {
+    const unsubscribe = db.collection('bookings').doc(id)
+      .onSnapshot(doc => {
+        if (!doc.exists) {
           console.log('[BOOKING_DETAIL_NOT_FOUND]');
           setBooking(null);
           setLoading(false);
           return;
         }
 
-        const b = bookingDoc.data();
+        const b = doc.data();
         const mapped: DetailBooking = {
-          id: bookingDoc.id,
+          id: doc.id,
           date: b?.date || '',
           time: b?.time || '',
           from: b?.fromAddress || '',
@@ -71,15 +70,14 @@ const BookingDetailScreen: React.FC = () => {
           riderPhone: b?.riderPhone,
         };
         setBooking(mapped);
-      } catch (e) {
+        setLoading(false);
+      }, (e) => {
         console.log('[BOOKING_DETAIL_EXCEPTION]', e);
         setBooking(null);
-      } finally {
         setLoading(false);
-      }
-    };
+      });
 
-    loadDetail();
+    return () => unsubscribe();
   }, [id]);
 
   if (loading) {

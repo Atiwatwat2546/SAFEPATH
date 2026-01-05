@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import colors from '../theme/colors';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { auth, db } from '../firebase';
+import { RootStackParamList } from '../navigation/AppNavigator';
+import colors from '../theme/colors';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -16,29 +16,25 @@ const StatCards: React.FC = () => {
   const [rating, setRating] = useState(0);
 
   useEffect(() => {
-    const loadStats = async () => {
-      try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-          console.log('[STATS_USER_NOT_LOGGED_IN]');
-          return;
-        }
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.log('[STATS_USER_NOT_LOGGED_IN]');
+      return;
+    }
 
-        const bookingsSnapshot = await db.collection('bookings')
-          .where('userId', '==', currentUser.uid)
-          .get();
-        
-        const all = bookingsSnapshot.docs.map(doc => doc.data());
+    const unsubscribe = db.collection('bookings')
+      .where('userId', '==', currentUser.uid)
+      .onSnapshot(snapshot => {
+        const all = snapshot.docs.map(doc => doc.data());
         const completed = all.filter((b: any) => b.status === 'completed');
         setServiceCount(completed.length);
         setTripCount(all.length);
         setRating(0);
-      } catch (e) {
+      }, (e) => {
         console.log('[STATS_LOAD_EXCEPTION]', e);
-      }
-    };
+      });
 
-    loadStats();
+    return () => unsubscribe();
   }, []);
 
   return (

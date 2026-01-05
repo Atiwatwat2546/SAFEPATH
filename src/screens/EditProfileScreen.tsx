@@ -1,28 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-  TextInput,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
-import * as ImagePicker from 'expo-image-picker';
-import { RootStackParamList } from '../navigation/AppNavigator';
-import Input from '../components/ui/input';
 import Button from '../components/ui/button';
-import colors from '../theme/colors';
+import Input from '../components/ui/input';
 import { auth, db } from '../firebase';
+import { RootStackParamList } from '../navigation/AppNavigator';
+import colors from '../theme/colors';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -45,59 +46,66 @@ const EditProfileScreen: React.FC = () => {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-          console.log('[EDIT_PROFILE_USER_NOT_LOGGED_IN]');
-          Alert.alert('ข้อผิดพลาด', 'กรุณาเข้าสู่ระบบก่อน');
-          navigation.navigate('Login');
-          return;
-        }
+  const initialLoadedRef = React.useRef(false);
 
-        const userDoc = await db.collection('users').doc(currentUser.uid).get();
-        if (!userDoc.exists) {
+  useEffect(() => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.log('[EDIT_PROFILE_USER_NOT_LOGGED_IN]');
+      Alert.alert('ข้อผิดพลาด', 'กรุณาเข้าสู่ระบบก่อน');
+      navigation.navigate('Login');
+      return;
+    }
+
+    const unsubscribe = db.collection('users').doc(currentUser.uid)
+      .onSnapshot(doc => {
+        if (!doc.exists) {
           console.log('[EDIT_PROFILE_DOC_NOT_FOUND]');
           return;
         }
 
-        const data = userDoc.data();
-        setFormData({
-          name: data?.name || '',
-          username: data?.username || '',
-          email: data?.email || currentUser.email || '',
-          phone: data?.phone || '',
-          idCard: data?.idCard || '',
-          birthDate: data?.birthDate || '',
-          gender: data?.gender || '',
-          occupation: data?.occupation || '',
-          address: data?.address || '',
-        });
-        
-        // โหลดรูปโปรไฟล์
+        const data = doc.data();
+
+        // Only set form fields on initial load to avoid overwriting in-progress edits
+        if (!initialLoadedRef.current) {
+          setFormData({
+            name: data?.name || '',
+            username: data?.username || '',
+            email: data?.email || currentUser.email || '',
+            phone: data?.phone || '',
+            idCard: data?.idCard || '',
+            birthDate: data?.birthDate || '',
+            gender: data?.gender || '',
+            occupation: data?.occupation || '',
+            address: data?.address || '',
+          });
+
+          // set selectedDate if provided
+          if (data?.birthDate) {
+            const parts = data.birthDate.split('/');
+            if (parts.length === 3) {
+              const day = parseInt(parts[0]);
+              const month = parseInt(parts[1]) - 1;
+              const year = parseInt(parts[2]) - 543; // พ.ศ. -> ค.ศ.
+              setSelectedDate(new Date(year, month, day));
+            }
+          }
+
+          initialLoadedRef.current = true;
+        }
+
+        // Always update profile image if it changes remotely
         if (data?.profileImage) {
           setProfileImage(data.profileImage);
         }
-        
-        // ตั้งค่าวันที่เริ่มต้นถ้ามีข้อมูล
-        if (data?.birthDate) {
-          const parts = data.birthDate.split('/');
-          if (parts.length === 3) {
-            const day = parseInt(parts[0]);
-            const month = parseInt(parts[1]) - 1;
-            const year = parseInt(parts[2]) - 543; // แปลงจาก พ.ศ. เป็น ค.ศ.
-            setSelectedDate(new Date(year, month, day));
-          }
-        }
-      } catch (e) {
-        console.log('[EDIT_PROFILE_LOAD_EXCEPTION]', e);
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    load();
+        setLoading(false);
+      }, e => {
+        console.log('[EDIT_PROFILE_LOAD_EXCEPTION]', e);
+        setLoading(false);
+      });
+
+    return () => unsubscribe();
   }, []);
 
   const handleDateChange = (event: any, date?: Date) => {

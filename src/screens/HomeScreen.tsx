@@ -1,18 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RootStackParamList } from '../navigation/AppNavigator';
-import WaveHeader from '../components/WaveHeader';
 import BookingCard from '../components/BookingCard';
-import UpcomingBooking from '../components/UpcomingBooking';
-import StatCards from '../components/StatCards';
 import PromotionCarousel from '../components/PromotionCarousel';
-import colors from '../theme/colors';
+import StatCards from '../components/StatCards';
+import UpcomingBooking from '../components/UpcomingBooking';
+import WaveHeader from '../components/WaveHeader';
 import { auth, db } from '../firebase';
-import { getAuthToken } from '../services/authStore';
+import { RootStackParamList } from '../navigation/AppNavigator';
+import colors from '../theme/colors';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -29,22 +28,20 @@ const HomeScreen: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-          console.log('[HOME_USER_NOT_LOGGED_IN]');
-          setUser(null);
-          setLoadingUser(false);
-          return;
-        }
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.log('[HOME_USER_NOT_LOGGED_IN]');
+      setUser(null);
+      setLoadingUser(false);
+      return;
+    }
 
-        // ดึงข้อมูลผู้ใช้จาก Firestore
-        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+    const userUnsub = db.collection('users').doc(currentUser.uid)
+      .onSnapshot(userDoc => {
         if (userDoc.exists) {
           const userData = userDoc.data();
-          setUser({ 
-            name: userData?.name || '', 
+          setUser({
+            name: userData?.name || '',
             username: userData?.username || userData?.email || '',
             profileImage: userData?.profileImage,
           });
@@ -52,34 +49,26 @@ const HomeScreen: React.FC = () => {
           console.log('[HOME_USER_DOC_NOT_FOUND]');
           setUser(null);
         }
-      } catch (e) {
+        setLoadingUser(false);
+      }, (e) => {
         console.log('[HOME_USER_LOAD_EXCEPTION]', e);
         setUser(null);
-      } finally {
         setLoadingUser(false);
-      }
-    };
+      });
 
-    const loadNotifications = async () => {
-      try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) return;
-
-        const notificationsSnapshot = await db.collection('notifications')
-          .where('userId', '==', currentUser.uid)
-          .get();
-        
-        const unread = notificationsSnapshot.docs.filter(
-          doc => !doc.data().read
-        ).length;
+    const notifUnsub = db.collection('notifications')
+      .where('userId', '==', currentUser.uid)
+      .onSnapshot(snapshot => {
+        const unread = snapshot.docs.filter(doc => !doc.data().read).length;
         setUnreadCount(unread);
-      } catch (e) {
+      }, (e) => {
         console.log('[HOME_NOTIFICATIONS_LOAD_EXCEPTION]', e);
-      }
-    };
+      });
 
-    loadUser();
-    loadNotifications();
+    return () => {
+      userUnsub();
+      notifUnsub();
+    };
   }, []);
 
   const displayName = user?.name || user?.username || 'ผู้ใช้ใหม่';
