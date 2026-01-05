@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Button from '../components/ui/button';
 import colors from '../theme/colors';
+import { clearAuthToken } from '../services/authStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -23,35 +24,85 @@ interface SettingGroup {
 const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
 
+  const handleEditProfile = () => {
+    navigation.navigate('EditProfile');
+  };
+
+  const handleNotifications = () => {
+    navigation.navigate('Notifications');
+  };
+
+  const handlePrivacy = () => {
+    Alert.alert('ความเป็นส่วนตัว', 'ข้อมูลของคุณได้รับการปกป้องด้วยมาตรฐานความปลอดภัยสูงสุด');
+  };
+
+  const handleLanguage = () => {
+    Alert.alert('ภาษา', 'ปัจจุบันรองรับภาษาไทยเท่านั้น\nเร็วๆ นี้จะมีภาษาอังกฤษ');
+  };
+
+  const handleHelpCenter = () => {
+    Alert.alert(
+      'ศูนย์ช่วยเหลือ',
+      'ติดต่อเรา:\n\nโทร: 02-123-4567\nอีเมล: support@safepath.com\nเวลาทำการ: จันทร์-ศุกร์ 9:00-18:00'
+    );
+  };
+
+  const handleTerms = () => {
+    Alert.alert(
+      'เงื่อนไขการใช้งาน',
+      'การใช้บริการนี้ถือว่าคุณยอมรับเงื่อนไขการใช้งานของเรา\n\n1. ผู้ใช้ต้องให้ข้อมูลที่ถูกต้อง\n2. ห้ามใช้บริการในทางที่ผิด\n3. บริษัทขอสงวนสิทธิ์ในการเปลี่ยนแปลงเงื่อนไข'
+    );
+  };
+
+  const handlePrivacyPolicy = () => {
+    Alert.alert(
+      'นโยบายความเป็นส่วนตัว',
+      'เราเก็บรักษาข้อมูลส่วนบุคคลของคุณอย่างปลอดภัย\n\n- ข้อมูลจะไม่ถูกแชร์กับบุคคลที่สาม\n- ใช้เพื่อการให้บริการเท่านั้น\n- คุณสามารถขอลบข้อมูลได้ตลอดเวลา'
+    );
+  };
+
   const settingGroups: SettingGroup[] = [
     {
       title: 'บัญชี',
       items: [
-        { icon: '👤', label: 'ข้อมูลส่วนตัว' },
-        { icon: '🔔', label: 'การแจ้งเตือน' },
-        { icon: '🔒', label: 'ความเป็นส่วนตัว' },
+        { icon: '👤', label: 'ข้อมูลส่วนตัว', onPress: handleEditProfile },
+        { icon: '🔔', label: 'การแจ้งเตือน', onPress: handleNotifications },
+        { icon: '🔒', label: 'ความเป็นส่วนตัว', onPress: handlePrivacy },
       ],
     },
     {
-      title: 'บัญชี',
+      title: 'ทั่วไป',
       items: [
-        { icon: '📄', label: 'ข้อมูลส่วนตัว' },
-        { icon: '🔒', label: 'ความเป็นส่วนตัว' },
-      ],
-    },
-    {
-      title: 'บัญชี',
-      items: [
-        { icon: '🌐', label: 'ภาษา' },
-        { icon: '💬', label: 'ศูนย์ช่วยเหลือ' },
-        { icon: '📑', label: 'เงื่อนไขการใช้งาน' },
-        { icon: '⚪', label: 'นโยบายความเป็นส่วนตัว' },
+        { icon: '🌐', label: 'ภาษา', onPress: handleLanguage },
+        { icon: '💬', label: 'ศูนย์ช่วยเหลือ', onPress: handleHelpCenter },
+        { icon: '📑', label: 'เงื่อนไขการใช้งาน', onPress: handleTerms },
+        { icon: '⚪', label: 'นโยบายความเป็นส่วนตัว', onPress: handlePrivacyPolicy },
       ],
     },
   ];
 
   const handleLogout = () => {
-    navigation.navigate('Welcome');
+    Alert.alert(
+      'ออกจากระบบ',
+      'คุณต้องการออกจากระบบใช่หรือไม่?',
+      [
+        {
+          text: 'ยกเลิก',
+          style: 'cancel',
+        },
+        {
+          text: 'ออกจากระบบ',
+          style: 'destructive',
+          onPress: () => {
+            clearAuthToken();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Welcome' }],
+            });
+          },
+        },
+      ]
+    );
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,17 @@ import { clearPendingProfile, getPendingProfile } from '../services/signupStore'
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+let GoogleSignin: any = null;
+let statusCodes: any = null;
+
+try {
+  const googleSignInModule = require('@react-native-google-signin/google-signin');
+  GoogleSignin = googleSignInModule.GoogleSignin;
+  statusCodes = googleSignInModule.statusCodes;
+} catch (e) {
+  console.log('[GOOGLE_SIGNIN] Native module not available in Expo Go');
+}
+
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [formData, setFormData] = useState({
@@ -32,8 +43,25 @@ const LoginScreen: React.FC = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleAvailable, setGoogleAvailable] = useState(false);
 
   const baseURL = 'http://192.168.1.13:4001';
+
+  useEffect(() => {
+    if (GoogleSignin) {
+      try {
+        GoogleSignin.configure({
+          webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+          offlineAccess: true,
+        });
+        setGoogleAvailable(true);
+      } catch (e) {
+        console.log('[GOOGLE_SIGNIN_CONFIG] Error:', e);
+        setGoogleAvailable(false);
+      }
+    }
+  }, []);
 
   const handleSubmit = async () => {
     if (!formData.username || !formData.password) {
@@ -171,6 +199,90 @@ const LoginScreen: React.FC = () => {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    if (!GoogleSignin || !googleAvailable) {
+      Alert.alert(
+        'Google Sign-In ไม่พร้อมใช้งาน',
+        'Google Sign-In ต้องใช้งานผ่าน Development Build หรือ Production Build\n\nใน Expo Go ไม่สามารถใช้งานได้\n\nกรุณาใช้การเข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่านแทน'
+      );
+      return;
+    }
+
+    try {
+      setGoogleLoading(true);
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      
+      const response = await fetch(`${baseURL}/api/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idToken: userInfo.idToken,
+          email: userInfo.user.email,
+          name: userInfo.user.name,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAuthToken(data.token);
+        navigation.navigate('MainTabs');
+      } else {
+        Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้');
+      }
+    } catch (error: any) {
+      if (statusCodes && error.code === statusCodes.SIGN_IN_CANCELLED) {
+        console.log('User cancelled Google sign in');
+      } else if (statusCodes && error.code === statusCodes.IN_PROGRESS) {
+        console.log('Google sign in already in progress');
+      } else if (statusCodes && error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('ข้อผิดพลาด', 'Google Play Services ไม่พร้อมใช้งาน');
+      } else {
+        console.log('Google sign in error:', error);
+        Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้');
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleForgotPassword = () => {
+    Alert.prompt(
+      'ลืมรหัสผ่าน',
+      'กรุณากรอกอีเมลของคุณเพื่อรับลิงก์รีเซ็ตรหัสผ่าน',
+      [
+        {
+          text: 'ยกเลิก',
+          style: 'cancel',
+        },
+        {
+          text: 'ส่ง',
+          onPress: async (email) => {
+            if (!email) {
+              Alert.alert('ข้อผิดพลาด', 'กรุณากรอกอีเมล');
+              return;
+            }
+            try {
+              const response = await fetch(`${baseURL}/api/auth/forgot-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+              });
+              if (response.ok) {
+                Alert.alert('สำเร็จ', 'ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว');
+              } else {
+                Alert.alert('ข้อผิดพลาด', 'ไม่พบอีเมลนี้ในระบบ');
+              }
+            } catch (error) {
+              Alert.alert('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+            }
+          },
+        },
+      ],
+      'plain-text'
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -214,7 +326,7 @@ const LoginScreen: React.FC = () => {
               secureTextEntry
             />
 
-            <TouchableOpacity style={styles.forgotPassword}>
+            <TouchableOpacity style={styles.forgotPassword} onPress={handleForgotPassword}>
               <Text style={styles.forgotPasswordText}>ลืมรหัสผ่าน</Text>
             </TouchableOpacity>
 
@@ -228,7 +340,7 @@ const LoginScreen: React.FC = () => {
               <View style={styles.dividerLine} />
             </View>
 
-            <Button variant="outline" style={styles.googleButton}>
+            <Button variant="outline" style={styles.googleButton} onPress={handleGoogleSignIn} loading={googleLoading} disabled={googleLoading}>
               <View style={styles.googleButtonContent}>
                 <Ionicons name="logo-google" size={20} color={colors.foreground} />
                 <Text style={styles.googleButtonText}>Sign in with Google</Text>

@@ -131,6 +131,43 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   res.json({ token, user: { id: user.id, username: user.username, name: user.name, phone: user.phone } });
 });
 
+app.post('/api/auth/google', (req: Request, res: Response) => {
+  const { email, name, idToken } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required' });
+  }
+  
+  let user = users.find((u) => u.email === email);
+  if (!user) {
+    user = {
+      id: genId(),
+      username: email.split('@')[0],
+      password: genId(),
+      email,
+      name,
+    };
+    users.push(user);
+  }
+  
+  const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+  res.json({ token, user: { id: user.id, username: user.username, name: user.name, email: user.email } });
+});
+
+app.post('/api/auth/forgot-password', (req: Request, res: Response) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required' });
+  }
+  
+  const user = users.find((u) => u.email === email);
+  if (!user) {
+    return res.status(404).json({ message: 'Email not found' });
+  }
+  
+  console.log(`[FORGOT_PASSWORD] Reset link would be sent to: ${email}`);
+  res.json({ message: 'Password reset link sent to email' });
+});
+
 app.get('/api/auth/me', authMiddleware, (req: AuthedRequest, res: Response) => {
   const user = req.user!;
   res.json({

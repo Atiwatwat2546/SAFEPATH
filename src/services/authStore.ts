@@ -5,3 +5,7 @@ export const setAuthToken = (token: string | null) => {
 };
 
 export const getAuthToken = () => authToken;
+
+export const clearAuthToken = () => {
+  authToken = null;
+};
