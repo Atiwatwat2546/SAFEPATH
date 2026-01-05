@@ -16,6 +16,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import Input from '../components/ui/input';
 import Button from '../components/ui/button';
 import colors from '../theme/colors';
+import { getPendingProfile, setPendingProfile } from '../services/signupStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -29,7 +30,19 @@ const SignUp3Screen: React.FC = () => {
   });
 
   const handleSubmit = () => {
-    navigation.navigate('MainTabs');
+    const current = getPendingProfile() || {};
+    const fullAddress = [formData.address, formData.subDistrict, formData.district]
+      .filter(Boolean)
+      .join(' ');
+
+    setPendingProfile({
+      ...current,
+      address: fullAddress,
+    });
+
+    // เมื่อเก็บข้อมูลโปรไฟล์ครบแล้ว ให้กลับไปหน้า Login
+    // เพื่อให้ผู้ใช้ตั้ง username/password และเชื่อม backend ที่ LoginScreen
+    navigation.navigate('Login');
   };
 
   return (

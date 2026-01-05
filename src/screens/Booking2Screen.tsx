@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../components/ui/button';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import colors from '../theme/colors';
+import { setPendingBooking } from '../services/bookingStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -25,6 +26,20 @@ const Booking2Screen: React.FC = () => {
   const [showTimePicker, setShowTimePicker] = useState(false);
 
   const handleNext = () => {
+    const formattedDate = date.toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    const formattedTime = time.toLocaleTimeString('th-TH', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    
+    setPendingBooking({
+      date: formattedDate,
+      time: formattedTime,
+    });
     navigation.navigate('Booking3');
   };
 

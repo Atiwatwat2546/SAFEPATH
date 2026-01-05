@@ -18,6 +18,8 @@ import Input from '../components/ui/input';
 import Button from '../components/ui/button';
 import colors from '../theme/colors';
 import { setAuthToken } from '../services/authStore';
+import { apiFetch } from '../services/api';
+import { clearPendingProfile, getPendingProfile } from '../services/signupStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -67,6 +69,22 @@ const LoginScreen: React.FC = () => {
       if (loginResponse.ok) {
         const loginData = await loginResponse.json();
         setAuthToken(loginData.token);
+        const pending = getPendingProfile();
+        if (pending) {
+          try {
+            const res = await apiFetch('/api/users/me', {
+              method: 'PUT',
+              body: JSON.stringify(pending),
+            });
+            if (!res.ok) {
+              console.log('[LOGIN_PROFILE_UPDATE_ERROR]', res.status);
+            }
+          } catch (e) {
+            console.log('[LOGIN_PROFILE_UPDATE_EXCEPTION]', e);
+          } finally {
+            clearPendingProfile();
+          }
+        }
         console.log('[LOGIN_SUCCESS]', {
           username: formData.username,
           userId: loginData.user?.id,
@@ -107,6 +125,22 @@ const LoginScreen: React.FC = () => {
         }
         const registerData = await registerResponse.json();
         setAuthToken(registerData.token);
+        const pending = getPendingProfile();
+        if (pending) {
+          try {
+            const res = await apiFetch('/api/users/me', {
+              method: 'PUT',
+              body: JSON.stringify(pending),
+            });
+            if (!res.ok) {
+              console.log('[REGISTER_PROFILE_UPDATE_ERROR]', res.status);
+            }
+          } catch (e) {
+            console.log('[REGISTER_PROFILE_UPDATE_EXCEPTION]', e);
+          } finally {
+            clearPendingProfile();
+          }
+        }
         console.log('[REGISTER_SUCCESS]', {
           username: formData.username,
           userId: registerData.user?.id,

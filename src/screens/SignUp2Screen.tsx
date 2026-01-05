@@ -18,6 +18,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import Input from '../components/ui/input';
 import Button from '../components/ui/button';
 import colors from '../theme/colors';
+import { getPendingProfile, setPendingProfile } from '../services/signupStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -45,6 +46,12 @@ const SignUp2Screen: React.FC = () => {
   };
 
   const handleSubmit = () => {
+    const current = getPendingProfile() || {};
+    setPendingProfile({
+      ...current,
+      birthDate: formData.birthDate,
+      gender: formData.gender,
+    });
     navigation.navigate('SignUp3');
   };
 

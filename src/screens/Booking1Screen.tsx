@@ -9,6 +9,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import Input from '../components/ui/input';
 import Button from '../components/ui/button';
 import colors from '../theme/colors';
+import { setPendingBooking, clearPendingBooking } from '../services/bookingStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -27,6 +28,10 @@ const Booking1Screen: React.FC = () => {
   const [fromLocation, setFromLocation] = useState<Location | null>(null);
   const [toLocation, setToLocation] = useState<Location | null>(null);
 
+  useEffect(() => {
+    clearPendingBooking();
+  }, []);
+
   // Default to Bangkok coordinates
   const defaultRegion = {
     latitude: 13.7563,
@@ -40,12 +45,13 @@ const Booking1Screen: React.FC = () => {
       Alert.alert('แจ้งเตือน', 'กรุณาระบุสถานที่ต้นทางและปลายทาง');
       return;
     }
-    navigation.navigate('Booking2', {
-      fromLocation,
-      toLocation,
+    setPendingBooking({
       fromAddress,
       toAddress,
+      fromLocation,
+      toLocation,
     });
+    navigation.navigate('Booking2' as any);
   };
 
   const steps = [

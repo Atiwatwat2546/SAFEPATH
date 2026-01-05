@@ -23,6 +23,7 @@ const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [user, setUser] = useState<HomeUser | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -43,12 +44,25 @@ const HomeScreen: React.FC = () => {
       }
     };
 
+    const loadNotifications = async () => {
+      try {
+        const res = await apiFetch('/api/notifications');
+        if (res.ok) {
+          const data = await res.json();
+          const unread = data.filter((n: any) => !n.read).length;
+          setUnreadCount(unread);
+        }
+      } catch (e) {
+        console.log('[HOME_NOTIFICATIONS_LOAD_EXCEPTION]', e);
+      }
+    };
+
     loadUser();
+    loadNotifications();
   }, []);
 
   const displayName = user?.name || user?.username || 'ผู้ใช้ใหม่';
   const avatarUri = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face';
-  const unreadCount = 0; // ยังไม่มี backend สำหรับ notifications จริง ใช้ 0 เป็นค่าจริงชั่วคราว
 
   return (
     <View style={styles.container}>

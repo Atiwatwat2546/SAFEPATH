@@ -7,6 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Button from '../components/ui/button';
 import colors from '../theme/colors';
+import { apiFetch } from '../services/api';
+import { getPendingBooking, clearPendingBooking } from '../services/bookingStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -27,31 +29,50 @@ const PaymentScreen: React.FC = () => {
     try {
       setLoading(true);
 
-      const baseURL = 'http://192.168.1.13:4001';
+      const bookingData = getPendingBooking();
 
-      const response = await fetch(`${baseURL}/api/payments`, {
+      const bookingResponse = await apiFetch('/api/bookings', {
+        method: 'POST',
+        body: JSON.stringify({
+          fromAddress: bookingData.fromAddress,
+          toAddress: bookingData.toAddress,
+          date: bookingData.date,
+          time: bookingData.time,
+          passengerType: bookingData.passengerType,
+          equipment: bookingData.equipment,
+        }),
+      });
+
+      if (!bookingResponse.ok) {
+        throw new Error('ไม่สามารถบันทึกการจองได้');
+      }
+
+      const paymentResponse = await fetch('http://192.168.1.13:4001/api/payments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           method: selectedMethod,
-          amount: 0, // demo amount; สามารถเปลี่ยนตามราคาจริงได้ภายหลัง
+          amount: 0,
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('ไม่สามารถบันทึกการชำระเงินได้');
+      if (!paymentResponse.ok) {
+        console.log('[PAYMENT_ERROR]', paymentResponse.status);
       }
 
-      Alert.alert('สำเร็จ', 'บันทึกวิธีชำระเงินเรียบร้อยแล้ว', [
+      clearPendingBooking();
+
+      Alert.alert('สำเร็จ', 'จองบริการเรียบร้อยแล้ว', [
         {
           text: 'ตกลง',
           onPress: () => navigation.navigate('MainTabs'),
         },
       ]);
     } catch (error) {
-      Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง');
+      console.log('[BOOKING_ERROR]', error);
+      Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกการจองได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
     }

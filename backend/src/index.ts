@@ -59,9 +59,21 @@ interface PaymentRecord {
   createdAt: string;
 }
 
+interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+  type: 'success' | 'info' | 'promo' | 'default';
+  createdAt: string;
+}
+
 const users: User[] = [];
 const bookings: Booking[] = [];
 const payments: PaymentRecord[] = [];
+const notifications: Notification[] = [];
 
 // Helper to generate simple IDs
 const genId = () => Math.random().toString(36).substring(2, 10);
@@ -210,6 +222,45 @@ app.post('/api/payments', (req: Request, res: Response) => {
   };
   payments.push(record);
   res.status(201).json(record);
+});
+
+// Notifications
+app.get('/api/notifications', authMiddleware, (req: AuthedRequest, res: Response) => {
+  const userNotifications = notifications.filter((n) => n.userId === req.user!.id);
+  res.json(userNotifications);
+});
+
+app.post('/api/notifications', authMiddleware, (req: AuthedRequest, res: Response) => {
+  const { title, message, type } = req.body;
+  if (!title || !message) {
+    return res.status(400).json({ message: 'title and message are required' });
+  }
+  const notification: Notification = {
+    id: genId(),
+    userId: req.user!.id,
+    title,
+    message,
+    time: 'เมื่อสักครู่',
+    read: false,
+    type: type || 'default',
+    createdAt: new Date().toISOString(),
+  };
+  notifications.push(notification);
+  res.status(201).json(notification);
+});
+
+app.put('/api/notifications/:id/read', authMiddleware, (req: AuthedRequest, res: Response) => {
+  const notification = notifications.find((n) => n.id === req.params.id && n.userId === req.user!.id);
+  if (!notification) return res.status(404).json({ message: 'Notification not found' });
+  notification.read = true;
+  res.json(notification);
+});
+
+app.put('/api/notifications/mark-all-read', authMiddleware, (req: AuthedRequest, res: Response) => {
+  notifications
+    .filter((n) => n.userId === req.user!.id && !n.read)
+    .forEach((n) => (n.read = true));
+  res.json({ message: 'All notifications marked as read' });
 });
 
 app.get('/', (_req: Request, res: Response) => {

@@ -8,6 +8,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import Input from '../components/ui/input';
 import Button from '../components/ui/button';
 import colors from '../theme/colors';
+import { setPendingBooking } from '../services/bookingStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -23,6 +24,15 @@ const Booking3Screen: React.FC = () => {
   const [otherAccompanied, setOtherAccompanied] = useState('');
 
   const handleNext = () => {
+    const equipment = [accompaniedBy];
+    if (otherAccompanied) {
+      equipment.push(otherAccompanied);
+    }
+    
+    setPendingBooking({
+      passengerType,
+      equipment,
+    });
     navigation.navigate('Booking4');
   };
 

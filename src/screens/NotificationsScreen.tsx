@@ -1,23 +1,65 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { notifications as initialNotifications } from '../data/notificationData';
+import { apiFetch } from '../services/api';
 import colors from '../theme/colors';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+  type: string;
+}
+
 const NotificationsScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const loadNotifications = async () => {
+    try {
+      setLoading(true);
+      const res = await apiFetch('/api/notifications');
+      if (!res.ok) {
+        console.log('[NOTIFICATIONS_LOAD_ERROR]', res.status);
+        setNotifications([]);
+        return;
+      }
+      const data = await res.json();
+      setNotifications(data);
+    } catch (e) {
+      console.log('[NOTIFICATIONS_LOAD_EXCEPTION]', e);
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    try {
+      const res = await apiFetch('/api/notifications/mark-all-read', {
+        method: 'PUT',
+      });
+      if (res.ok) {
+        setNotifications(notifications.map((n) => ({ ...n, read: true })));
+      }
+    } catch (e) {
+      console.log('[MARK_ALL_READ_ERROR]', e);
+    }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -62,12 +104,18 @@ const NotificationsScreen: React.FC = () => {
         </View>
       )}
 
-      <FlatList
-        data={notifications}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>กำลังโหลดการแจ้งเตือน...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={notifications}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
           <View
             style={[
               styles.notificationCard,
@@ -102,7 +150,8 @@ const NotificationsScreen: React.FC = () => {
             <Text style={styles.emptyText}>ไม่มีการแจ้งเตือน</Text>
           </View>
         }
-      />
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -225,6 +274,17 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
   },
   emptyText: {
+    fontSize: 14,
+    color: colors.mutedForeground,
+    marginTop: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  loadingText: {
     fontSize: 14,
     color: colors.mutedForeground,
     marginTop: 12,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,11 +7,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Button from '../components/ui/button';
 import colors from '../theme/colors';
+import { getPendingBooking } from '../services/bookingStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const Booking4Screen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+  const [bookingData, setBookingData] = useState(getPendingBooking());
+
+  useEffect(() => {
+    setBookingData(getPendingBooking());
+  }, []);
 
   const handleConfirm = () => {
     navigation.navigate('Payment');
@@ -24,13 +30,19 @@ const Booking4Screen: React.FC = () => {
     { number: 4, active: true },
   ];
 
+  const passengerTypeLabel: Record<string, string> = {
+    elderly: 'ผู้สูงอายุ',
+    patient: 'ผู้ป่วย',
+    disabled: 'ผู้พิการ',
+  };
+
   const summaryItems = [
-    { label: 'จาก :', value: 'เหตุผู้สูงอายุ/ผู้ป่วย/ผู้พิการ' },
-    { label: 'ถึง :', value: 'อุปกรณ์ช่วยเหลือที่ต้องการ' },
-    { label: 'วันที่ :', value: '5 พฤศจิกายน 2568' },
-    { label: 'เวลา :', value: '13:30 น.' },
-    { label: 'ผู้โดยสาร :', value: 'เหตุผู้สูงอายุ' },
-    { label: 'อุปกรณ์ :', value: 'วีลแชร์' },
+    { label: 'จาก :', value: bookingData.fromAddress || '-' },
+    { label: 'ถึง :', value: bookingData.toAddress || '-' },
+    { label: 'วันที่ :', value: bookingData.date || '-' },
+    { label: 'เวลา :', value: bookingData.time || '-' },
+    { label: 'ผู้โดยสาร :', value: passengerTypeLabel[bookingData.passengerType || ''] || '-' },
+    { label: 'อุปกรณ์ :', value: bookingData.equipment?.join(', ') || '-' },
   ];
 
   return (

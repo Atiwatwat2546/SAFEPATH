@@ -94,6 +94,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  loadingRow: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

@@ -16,6 +16,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import Input from '../components/ui/input';
 import Button from '../components/ui/button';
 import colors from '../theme/colors';
+import { setPendingProfile } from '../services/signupStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -29,6 +30,11 @@ const SignUpScreen: React.FC = () => {
   });
 
   const handleSubmit = () => {
+    // เก็บข้อมูลพื้นฐานไว้ชั่วคราว เพื่อนำไปอัปเดตโปรไฟล์หลังจากสมัคร/ล็อกอินสำเร็จ
+    setPendingProfile({
+      name: formData.name,
+      phone: formData.phone,
+    });
     navigation.navigate('SignUp2');
   };
 
