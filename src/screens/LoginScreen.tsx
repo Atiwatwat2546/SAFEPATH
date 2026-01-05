@@ -283,6 +283,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   headerTitle: {
+    fontFamily: 'Prompt_600SemiBold',
     fontSize: 20,
     fontWeight: '600',
     color: colors.white,
@@ -299,12 +300,14 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   title: {
+    fontFamily: 'Prompt_700Bold',
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.gray800,
     marginBottom: 8,
   },
   subtitle: {
+    fontFamily: 'Prompt_400Regular',
     fontSize: 14,
     color: colors.gray500,
   },
@@ -316,6 +319,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   forgotPasswordText: {
+    fontFamily: 'Prompt_400Regular',
     fontSize: 14,
     color: colors.primary,
   },
@@ -334,6 +338,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray300,
   },
   dividerText: {
+    fontFamily: 'Prompt_400Regular',
     paddingHorizontal: 16,
     color: colors.gray500,
     fontSize: 14,
@@ -348,6 +353,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   googleButtonText: {
+    fontFamily: 'Prompt_400Regular',
     fontSize: 16,
     color: colors.gray700,
   },
@@ -358,10 +364,12 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   signupText: {
+    fontFamily: 'Prompt_400Regular',
     fontSize: 14,
     color: colors.gray600,
   },
   signupLink: {
+    fontFamily: 'Prompt_500Medium',
     fontSize: 14,
     color: colors.primary,
     fontWeight: '500',

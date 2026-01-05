@@ -175,6 +175,8 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   headerTitle: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 20,
     fontWeight: '600',
     color: colors.white,
@@ -191,6 +193,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
+    fontFamily: 'Prompt_700Bold',
+
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.gray800,
@@ -230,6 +234,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   genderLabel: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 14,
     fontWeight: '500',
     color: colors.foreground,
@@ -264,6 +270,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   genderText: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 16,
     color: colors.foreground,
   },

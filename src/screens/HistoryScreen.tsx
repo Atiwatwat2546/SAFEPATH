@@ -147,6 +147,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
+    fontFamily: 'Prompt_700Bold',
+
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.foreground,
@@ -168,6 +170,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   tabText: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 14,
     fontWeight: '500',
     color: colors.mutedForeground,
@@ -184,6 +188,8 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
   },
   emptyText: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.mutedForeground,
   },

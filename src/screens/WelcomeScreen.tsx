@@ -57,6 +57,8 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   title: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 24,
     fontWeight: '500',
     color: colors.gray800,
@@ -79,10 +81,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   buttonText: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 16,
     color: colors.primary,
   },
   buttonTextWhite: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 16,
     color: colors.white,
   },

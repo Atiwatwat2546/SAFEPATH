@@ -12,6 +12,12 @@ export const colors = {
   // Text colors
   foreground: '#1F2937',
   mutedForeground: '#6B7280',
+  
+  // Font family
+  fontFamily: 'Prompt_400Regular',
+  fontFamilyMedium: 'Prompt_500Medium',
+  fontFamilySemiBold: 'Prompt_600SemiBold',
+  fontFamilyBold: 'Prompt_700Bold',
 
   // Secondary colors
   secondary: '#F3F4F6',

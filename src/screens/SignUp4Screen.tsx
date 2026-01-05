@@ -167,6 +167,8 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   headerTitle: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 20,
     fontWeight: '600',
     color: colors.white,
@@ -183,12 +185,16 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   title: {
+    fontFamily: 'Prompt_700Bold',
+
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.gray800,
     marginBottom: 8,
   },
   subtitle: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.gray500,
   },
@@ -196,6 +202,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   disclaimer: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.gray600,
     marginTop: 8,

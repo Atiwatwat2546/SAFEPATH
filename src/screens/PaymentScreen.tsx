@@ -4,10 +4,11 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Button from '../components/ui/button';
 import colors from '../theme/colors';
-import { apiFetch } from '../services/api';
+import { auth, db } from '../firebase';
 import { getPendingBooking, clearPendingBooking } from '../services/bookingStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -29,47 +30,61 @@ const PaymentScreen: React.FC = () => {
     try {
       setLoading(true);
 
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        Alert.alert('ข้อผิดพลาด', 'กรุณาเข้าสู่ระบบก่อน');
+        navigation.navigate('Login');
+        return;
+      }
+
       const bookingData = getPendingBooking();
-
-      const bookingResponse = await apiFetch('/api/bookings', {
-        method: 'POST',
-        body: JSON.stringify({
-          fromAddress: bookingData.fromAddress,
-          toAddress: bookingData.toAddress,
-          date: bookingData.date,
-          time: bookingData.time,
-          passengerType: bookingData.passengerType,
-          equipment: bookingData.equipment,
-        }),
-      });
-
-      if (!bookingResponse.ok) {
-        throw new Error('ไม่สามารถบันทึกการจองได้');
+      if (!bookingData) {
+        Alert.alert('ข้อผิดพลาด', 'ไม่พบข้อมูลการจอง');
+        return;
       }
 
-      const paymentResponse = await fetch('http://192.168.1.13:4001/api/payments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          method: selectedMethod,
-          amount: 0,
-        }),
+      const now = new Date().toISOString();
+      
+      // บันทึกการจองลง Firestore
+      const bookingRef = await db.collection('bookings').add({
+        userId: currentUser.uid,
+        fromAddress: bookingData.fromAddress || '',
+        toAddress: bookingData.toAddress || '',
+        date: bookingData.date || '',
+        time: bookingData.time || '',
+        passengerType: bookingData.passengerType || '',
+        equipment: bookingData.equipment || [],
+        paymentMethod: selectedMethod,
+        status: 'pending',
+        createdAt: now,
+        updatedAt: now,
       });
 
-      if (!paymentResponse.ok) {
-        console.log('[PAYMENT_ERROR]', paymentResponse.status);
-      }
+      // บันทึกการชำระเงินลง Firestore
+      await db.collection('payments').add({
+        userId: currentUser.uid,
+        bookingId: bookingRef.id,
+        method: selectedMethod,
+        amount: 0,
+        status: 'pending',
+        createdAt: now,
+      });
 
       clearPendingBooking();
 
-      Alert.alert('สำเร็จ', 'จองบริการเรียบร้อยแล้ว', [
-        {
-          text: 'ตกลง',
-          onPress: () => navigation.navigate('MainTabs'),
-        },
-      ]);
+      // แสดง Toast notification
+      Toast.show({
+        type: 'success',
+        text1: '🎉 จองบริการสำเร็จ!',
+        text2: `วันที่: ${bookingData.date} | เวลา: ${bookingData.time}`,
+        visibilityTime: 4000,
+        position: 'top',
+      });
+
+      // รอให้ Toast แสดงแล้วค่อยกลับหน้า Home
+      setTimeout(() => {
+        navigation.navigate('MainTabs');
+      }, 1500);
     } catch (error) {
       console.log('[BOOKING_ERROR]', error);
       Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกการจองได้ กรุณาลองใหม่อีกครั้ง');
@@ -158,6 +173,8 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   headerTitle: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 20,
     fontWeight: '600',
     color: colors.white,
@@ -179,12 +196,16 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   title: {
+    fontFamily: 'Prompt_700Bold',
+
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.foreground,
     marginBottom: 8,
   },
   subtitle: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.mutedForeground,
     marginBottom: 24,
@@ -219,11 +240,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   methodLabel: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 16,
     fontWeight: '500',
     color: colors.foreground,
   },
   methodDescription: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 12,
     color: colors.mutedForeground,
     marginTop: 2,
@@ -237,6 +262,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   summaryTitle: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 14,
     fontWeight: '600',
     color: colors.foreground,
@@ -246,10 +273,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   summaryLabel: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.mutedForeground,
   },
   summaryValue: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 14,
     color: colors.foreground,
     fontWeight: '500',
@@ -261,11 +292,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   summaryTotalLabel: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 16,
     fontWeight: '600',
     color: colors.foreground,
   },
   summaryTotalValue: {
+    fontFamily: 'Prompt_700Bold',
+
     fontSize: 18,
     fontWeight: '700',
     color: colors.primary,

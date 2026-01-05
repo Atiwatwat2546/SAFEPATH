@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import colors from '../theme/colors';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { apiFetch } from '../services/api';
+import { auth, db } from '../firebase';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -22,19 +22,28 @@ const ProfileInfo: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await apiFetch('/api/auth/me');
-        if (!res.ok) {
-          console.log('[PROFILE_INFO_LOAD_ERROR]', res.status);
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          console.log('[PROFILE_INFO_USER_NOT_LOGGED_IN]');
           setInfoItems([]);
           return;
         }
-        const data = await res.json();
+
+        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+        if (!userDoc.exists) {
+          console.log('[PROFILE_INFO_DOC_NOT_FOUND]');
+          setInfoItems([]);
+          return;
+        }
+
+        const data = userDoc.data();
         const items: InfoItem[] = [
-          { icon: 'mail', label: 'อีเมล', value: data.email || '-' },
-          { icon: 'call', label: 'เบอร์โทรศัพท์', value: data.phone || '-' },
-          { icon: 'calendar', label: 'วันเกิด', value: data.birthDate || '-' },
-          { icon: 'person', label: 'เพศ', value: data.gender || '-' },
-          { icon: 'location', label: 'ที่อยู่', value: data.address || '-' },
+          { icon: 'mail', label: 'อีเมล', value: data?.email || currentUser.email || '-' },
+          { icon: 'call', label: 'เบอร์โทรศัพท์', value: data?.phone || '-' },
+          { icon: 'calendar', label: 'วันเกิด', value: data?.birthDate || '-' },
+          { icon: 'person', label: 'เพศ', value: data?.gender || '-' },
+          { icon: 'briefcase', label: 'อาชีพ', value: data?.occupation || '-' },
+          { icon: 'location', label: 'ที่อยู่', value: data?.address || '-' },
         ];
         setInfoItems(items);
       } catch (e) {
@@ -121,10 +130,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   label: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 12,
     color: colors.mutedForeground,
   },
   value: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 14,
     fontWeight: '500',
     color: colors.foreground,
@@ -142,6 +155,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   editButtonText: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 14,
     fontWeight: '500',
     color: colors.primary,

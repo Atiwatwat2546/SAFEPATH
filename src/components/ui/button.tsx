@@ -79,6 +79,7 @@ const Button: React.FC<ButtonProps> = ({
 
   const getTextStyle = (): TextStyle => {
     const baseTextStyle: TextStyle = {
+      fontFamily: 'Prompt_600SemiBold',
       fontWeight: '600',
     };
 

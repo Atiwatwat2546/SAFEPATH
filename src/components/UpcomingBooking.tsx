@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../theme/colors';
 import { auth, db } from '../firebase';
 
 interface Upcoming {
+  id: string;
   date: string;
   time: string;
   from: string;
   to: string;
+  status: string;
 }
 
 const UpcomingBooking: React.FC = () => {
@@ -26,7 +28,8 @@ const UpcomingBooking: React.FC = () => {
 
         const bookingsSnapshot = await db.collection('bookings')
           .where('userId', '==', currentUser.uid)
-          .where('status', '==', 'upcoming')
+          .where('status', '==', 'pending')
+          .orderBy('createdAt', 'desc')
           .limit(1)
           .get();
         
@@ -35,12 +38,15 @@ const UpcomingBooking: React.FC = () => {
           return;
         }
 
-        const b = bookingsSnapshot.docs[0].data();
+        const doc = bookingsSnapshot.docs[0];
+        const b = doc.data();
         setUpcoming({
+          id: doc.id,
           date: b.date,
           time: b.time,
           from: b.fromAddress,
           to: b.toAddress,
+          status: b.status,
         });
       } catch (e) {
         console.log('[UPCOMING_LOAD_EXCEPTION]', e);
@@ -60,10 +66,22 @@ const UpcomingBooking: React.FC = () => {
     );
   }
 
+  const handleCardPress = () => {
+    Alert.alert(
+      'รายละเอียดการจอง',
+      `วันที่: ${upcoming.date}\nเวลา: ${upcoming.time}\n\nจาก: ${upcoming.from}\n\nถึง: ${upcoming.to}\n\nสถานะ: รอยืนยัน\n\nคนขับ: กำลังจัดหาคนขับให้คุณ...`,
+      [{ text: 'ตกลง' }]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>การจองที่กำลังจะมาถึง</Text>
-      <View style={styles.card}>
+      <TouchableOpacity 
+        style={styles.card}
+        activeOpacity={0.7}
+        onPress={handleCardPress}
+      >
         <View style={styles.row}>
           <View style={styles.iconContainer}>
             <Ionicons name="time" size={20} color={colors.primary} />
@@ -78,13 +96,15 @@ const UpcomingBooking: React.FC = () => {
             </View>
             <Text style={styles.locationSubText}>ถึง: {upcoming.to}</Text>
           </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.mutedForeground} />
         </View>
         <View style={styles.footer}>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>ยืนยันแล้ว</Text>
+            <Text style={styles.badgeText}>รอยืนยัน</Text>
           </View>
+          <Text style={styles.tapHint}>แตะเพื่อดูรายละเอียด</Text>
         </View>
-      </View>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -94,10 +114,14 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   emptyText: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.mutedForeground,
   },
   sectionTitle: {
+    fontFamily: 'Prompt_700Bold',
+
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.foreground,
@@ -129,6 +153,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dateTime: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 16,
     fontWeight: '600',
     color: colors.foreground,
@@ -140,10 +166,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   locationText: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.mutedForeground,
   },
   locationSubText: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.mutedForeground,
     marginLeft: 20,
@@ -159,9 +189,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   badgeText: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 12,
     fontWeight: '500',
     color: colors.primary,
+  },
+  tapHint: {
+    fontFamily: 'Prompt_400Regular',
+
+    fontSize: 12,
+    color: colors.mutedForeground,
+    fontStyle: 'italic',
   },
 });
 

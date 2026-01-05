@@ -58,10 +58,13 @@ const StatCards: React.FC = () => {
         <Text style={styles.statLabel}>ตั้งค่า</Text>
       </TouchableOpacity>
 
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => navigation.navigate('BookingHistory')}
+      >
         <Text style={styles.statNumber}>{tripCount}</Text>
         <Text style={styles.statLabel}>การเดินทางทั้งหมด</Text>
-      </View>
+      </TouchableOpacity>
 
       <View style={styles.card}>
         <View style={styles.ratingRow}>
@@ -96,11 +99,15 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   statNumber: {
+    fontFamily: 'Prompt_700Bold',
+
     fontSize: 32,
     fontWeight: 'bold',
     color: colors.primary,
   },
   statLabel: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 12,
     color: colors.mutedForeground,
     marginTop: 4,
@@ -121,6 +128,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   ratingNumber: {
+    fontFamily: 'Prompt_700Bold',
+
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.foreground,

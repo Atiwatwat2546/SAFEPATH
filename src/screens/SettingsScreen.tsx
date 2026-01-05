@@ -156,6 +156,8 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   headerTitle: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 18,
     fontWeight: '600',
     color: colors.white,
@@ -176,6 +178,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   groupTitle: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 12,
     fontWeight: '600',
     color: colors.mutedForeground,
@@ -198,9 +202,13 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   settingIcon: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 12,
   },
   settingLabel: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.foreground,
   },
@@ -217,6 +225,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   versionText: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 12,
     color: colors.mutedForeground,
   },

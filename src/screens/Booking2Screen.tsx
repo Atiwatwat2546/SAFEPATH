@@ -228,6 +228,8 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   headerTitle: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 20,
     fontWeight: '600',
     color: colors.white,
@@ -250,6 +252,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   stepText: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 16,
     fontWeight: '600',
     color: colors.mutedForeground,
@@ -278,12 +282,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
+    fontFamily: 'Prompt_700Bold',
+
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.foreground,
     textAlign: 'center',
   },
   subtitle: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.mutedForeground,
     textAlign: 'center',
@@ -296,6 +304,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 14,
     fontWeight: '500',
     color: colors.foreground,
@@ -311,6 +321,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   pickerText: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 16,
     color: colors.foreground,
   },

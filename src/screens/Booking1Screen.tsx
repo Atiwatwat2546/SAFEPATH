@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Input from '../components/ui/input';
 import Button from '../components/ui/button';
@@ -219,52 +218,13 @@ const Booking1Screen: React.FC = () => {
                     )}
                   </TouchableOpacity>
                 </View>
-                <View style={styles.autocompleteContainer}>
-                  <GooglePlacesAutocomplete
-                    placeholder="ค้นหาสถานที่ต้นทาง"
-                    minLength={2}
-                    autoFocus={false}
-                    returnKeyType={'search'}
-                    listViewDisplayed='auto'
-                    onPress={(data, details = null) => {
-                      setFromAddress(data.description);
-                      if (details) {
-                        setFromLocation({
-                          lat: details.geometry.location.lat,
-                          lng: details.geometry.location.lng,
-                          address: data.description,
-                        });
-                        const newRegion = {
-                          latitude: details.geometry.location.lat,
-                          longitude: details.geometry.location.lng,
-                          latitudeDelta: 0.01,
-                          longitudeDelta: 0.01,
-                        };
-                        mapRef.current?.animateToRegion(newRegion, 1000);
-                      }
-                    }}
-                    query={{
-                      key: 'AIzaSyCgHgxgROSk5dGqEX6s_pHG5mftBKXtG_I',
-                      language: 'th',
-                      types: 'establishment',
-                      components: 'country:th',
-                    }}
-                    fetchDetails={true}
-                    enablePoweredByContainer={false}
-                    debounce={400}
-                    styles={{
-                      textInputContainer: styles.googleInputContainer,
-                      textInput: styles.googleInput,
-                      listView: styles.googleListView,
-                      row: styles.googleRow,
-                      description: styles.googleDescription,
-                      poweredContainer: { display: 'none' },
-                    }}
-                    textInputProps={{
-                      placeholderTextColor: colors.mutedForeground,
-                    }}
-                  />
-                </View>
+                <Input
+                  placeholder="พิมพ์ชื่อสถานที่ต้นทาง"
+                  value={fromAddress}
+                  onChangeText={setFromAddress}
+                  containerStyle={styles.input}
+                />
+                <Text style={styles.helperText}>💡 กดปุ่ม "ใช้ตำแหน่งปัจจุบัน" หรือพิมพ์ชื่อสถานที่</Text>
               </View>
             </View>
 
@@ -272,53 +232,12 @@ const Booking1Screen: React.FC = () => {
               <View style={[styles.dot, { backgroundColor: colors.destructive }]} />
               <View style={styles.inputWrapper}>
                 <Text style={styles.inputLabel}>ปลายทาง (ส่งผู้โดยสาร)</Text>
-                <View style={styles.autocompleteContainer}>
-                  <GooglePlacesAutocomplete
-                    placeholder="ค้นหาชื่อสถานที่ปลายทาง"
-                    minLength={2}
-                    autoFocus={false}
-                    returnKeyType={'search'}
-                    listViewDisplayed='auto'
-                    onPress={(data, details = null) => {
-                      setToAddress(data.description);
-                      if (details) {
-                        setToLocation({
-                          lat: details.geometry.location.lat,
-                          lng: details.geometry.location.lng,
-                          address: data.description,
-                        });
-                        // อัปเดตแมพให้แสดงปลายทาง
-                        const newRegion = {
-                          latitude: details.geometry.location.lat,
-                          longitude: details.geometry.location.lng,
-                          latitudeDelta: 0.01,
-                          longitudeDelta: 0.01,
-                        };
-                        mapRef.current?.animateToRegion(newRegion, 1000);
-                      }
-                    }}
-                    query={{
-                      key: 'AIzaSyCgHgxgROSk5dGqEX6s_pHG5mftBKXtG_I',
-                      language: 'th',
-                      types: 'establishment',
-                      components: 'country:th',
-                    }}
-                    fetchDetails={true}
-                    enablePoweredByContainer={false}
-                    debounce={400}
-                    styles={{
-                      textInputContainer: styles.googleInputContainer,
-                      textInput: styles.googleInput,
-                      listView: styles.googleListView,
-                      row: styles.googleRow,
-                      description: styles.googleDescription,
-                      poweredContainer: { display: 'none' },
-                    }}
-                    textInputProps={{
-                      placeholderTextColor: colors.mutedForeground,
-                    }}
-                  />
-                </View>
+                <Input
+                  placeholder="พิมพ์ชื่อสถานที่ปลายทาง"
+                  value={toAddress}
+                  onChangeText={setToAddress}
+                  containerStyle={styles.input}
+                />
                 <Text style={styles.helperText}>💡 พิมพ์ชื่อสถานที่ เช่น "สนามบินสุวรรณภูมิ"</Text>
               </View>
             </View>
@@ -349,6 +268,8 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   headerTitle: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 20,
     fontWeight: '600',
     color: colors.white,
@@ -371,6 +292,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   stepText: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 16,
     fontWeight: '600',
     color: colors.mutedForeground,
@@ -431,6 +354,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputLabel: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 14,
     fontWeight: '500',
     color: colors.foreground,
@@ -445,58 +370,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary + '15',
   },
   locationButtonText: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 12,
     color: colors.primary,
     fontWeight: '500',
   },
   helperText: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 12,
     color: colors.mutedForeground,
     marginTop: 4,
   },
   input: {
     marginBottom: 0,
-  },
-  autocompleteContainer: {
-    flex: 1,
-    zIndex: 999,
-    position: 'relative',
-  },
-  googleInputContainer: {
-    backgroundColor: 'transparent',
-    borderTopWidth: 0,
-    borderBottomWidth: 0,
-    paddingHorizontal: 0,
-  },
-  googleInput: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: colors.foreground,
-    height: 48,
-  },
-  googleListView: {
-    backgroundColor: colors.card,
-    borderRadius: 8,
-    marginTop: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-    maxHeight: 200,
-  },
-  googleRow: {
-    backgroundColor: colors.card,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  googleDescription: {
-    fontSize: 14,
-    color: colors.foreground,
   },
   nextButton: {
     marginTop: 24,

@@ -117,6 +117,8 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   headerTitle: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 20,
     fontWeight: '600',
     color: colors.white,
@@ -133,6 +135,8 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   title: {
+    fontFamily: 'Prompt_700Bold',
+
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.gray800,

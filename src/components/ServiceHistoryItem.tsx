@@ -116,6 +116,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dateTime: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 16,
     fontWeight: '600',
     color: colors.foreground,
@@ -130,15 +132,21 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   locationLabel: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.mutedForeground,
   },
   locationValue: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 14,
     fontWeight: '500',
     color: colors.foreground,
   },
   toLocation: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 14,
     fontWeight: '500',
     color: colors.foreground,
@@ -158,10 +166,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   caregiverLabel: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 12,
     color: colors.mutedForeground,
   },
   caregiverName: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 14,
     fontWeight: '500',
     color: colors.foreground,
@@ -174,10 +186,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   priceLabel: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 12,
     color: colors.mutedForeground,
   },
   priceValue: {
+    fontFamily: 'Prompt_700Bold',
+
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.accent,
@@ -193,6 +209,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   detailButtonText: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 14,
     fontWeight: '500',
     color: colors.primary,

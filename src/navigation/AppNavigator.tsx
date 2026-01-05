@@ -23,6 +23,7 @@ import Booking2Screen from '../screens/Booking2Screen';
 import Booking3Screen from '../screens/Booking3Screen';
 import Booking4Screen from '../screens/Booking4Screen';
 import PaymentScreen from '../screens/PaymentScreen';
+import BookingHistoryScreen from '../screens/BookingHistoryScreen';
 
 export type RootStackParamList = {
   Welcome: undefined;
@@ -35,6 +36,7 @@ export type RootStackParamList = {
   Notifications: undefined;
   EditProfile: undefined;
   BookingDetail: { id: string };
+  BookingHistory: undefined;
   Booking1: undefined;
   Booking2: { fromLocation?: any; toLocation?: any; fromAddress?: string; toAddress?: string };
   Booking3: undefined;
@@ -108,6 +110,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
+      <Stack.Screen name="BookingHistory" component={BookingHistoryScreen} />
       <Stack.Screen name="Booking1" component={Booking1Screen} />
       <Stack.Screen name="Booking2" component={Booking2Screen} />
       <Stack.Screen name="Booking3" component={Booking3Screen} />

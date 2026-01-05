@@ -37,12 +37,16 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   title: {
+    fontFamily: 'Prompt_700Bold',
+
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.foreground,
     marginBottom: 4,
   },
   subtitle: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.mutedForeground,
     marginBottom: 16,

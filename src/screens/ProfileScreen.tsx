@@ -14,6 +14,7 @@ interface ProfileData {
   birthDate?: string;
   gender?: string;
   address?: string;
+  profileImage?: string;
 }
 
 const ProfileScreen: React.FC = () => {
@@ -43,6 +44,7 @@ const ProfileScreen: React.FC = () => {
             birthDate: userData?.birthDate || '',
             gender: userData?.gender || '',
             address: userData?.address || '',
+            profileImage: userData?.profileImage,
           });
         } else {
           console.log('[PROFILE_DOC_NOT_FOUND]');
@@ -60,14 +62,19 @@ const ProfileScreen: React.FC = () => {
   }, []);
 
   const displayName = profile?.name || profile?.username || profile?.email || 'ผู้ใช้ใหม่';
-  const avatarUri = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face';
 
   return (
     <View style={styles.container}>
       <WaveHeader height={210}>
         <SafeAreaView edges={['top']}>
           <View style={styles.headerContent}>
-            <Image source={{ uri: avatarUri }} style={styles.avatar} />
+            {profile?.profileImage ? (
+              <Image source={{ uri: profile.profileImage }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
+              </View>
+            )}
           </View>
         </SafeAreaView>
       </WaveHeader>
@@ -109,6 +116,17 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
+  avatarPlaceholder: {
+    backgroundColor: colors.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontFamily: 'Prompt_700Bold',
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
   content: {
     flex: 1,
     marginTop: -24,
@@ -133,6 +151,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   name: {
+    fontFamily: 'Prompt_700Bold',
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.white,

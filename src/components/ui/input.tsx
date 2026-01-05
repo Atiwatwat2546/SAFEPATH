@@ -37,12 +37,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
+    fontFamily: 'Prompt_500Medium',
     fontSize: 14,
     fontWeight: '500',
     color: colors.foreground,
     marginBottom: 8,
   },
   input: {
+    fontFamily: 'Prompt_400Regular',
     height: 48,
     borderWidth: 1,
     borderColor: colors.border,
@@ -56,6 +58,7 @@ const styles = StyleSheet.create({
     borderColor: colors.destructive,
   },
   errorText: {
+    fontFamily: 'Prompt_400Regular',
     fontSize: 12,
     color: colors.destructive,
     marginTop: 4,

@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Button from '../components/ui/button';
 import colors from '../theme/colors';
-import { apiFetch } from '../services/api';
+import { auth, db } from '../firebase';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type RouteProps = RouteProp<RootStackParamList, 'BookingDetail'>;
@@ -18,10 +18,14 @@ interface DetailBooking {
   time: string;
   from: string;
   to: string;
-  caregiver: string;
-  price: number;
+  passengerType: string;
+  equipment: string[];
+  paymentMethod: string;
   status: string;
-  rating: number;
+  createdAt: string;
+  riderId?: string;
+  riderName?: string;
+  riderPhone?: string;
 }
 
 const BookingDetailScreen: React.FC = () => {
@@ -34,23 +38,37 @@ const BookingDetailScreen: React.FC = () => {
   useEffect(() => {
     const loadDetail = async () => {
       try {
-        const res = await apiFetch(`/api/bookings/${id}`);
-        if (!res.ok) {
-          console.log('[BOOKING_DETAIL_ERROR]', res.status);
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          console.log('[BOOKING_DETAIL_USER_NOT_LOGGED_IN]');
           setBooking(null);
+          setLoading(false);
           return;
         }
-        const b = await res.json();
+
+        const bookingDoc = await db.collection('bookings').doc(id).get();
+        if (!bookingDoc.exists) {
+          console.log('[BOOKING_DETAIL_NOT_FOUND]');
+          setBooking(null);
+          setLoading(false);
+          return;
+        }
+
+        const b = bookingDoc.data();
         const mapped: DetailBooking = {
-          id: b.id,
-          date: b.date,
-          time: b.time,
-          from: b.fromAddress,
-          to: b.toAddress,
-          caregiver: '',
-          price: 0,
-          status: b.status,
-          rating: 0,
+          id: bookingDoc.id,
+          date: b?.date || '',
+          time: b?.time || '',
+          from: b?.fromAddress || '',
+          to: b?.toAddress || '',
+          passengerType: b?.passengerType || '',
+          equipment: b?.equipment || [],
+          paymentMethod: b?.paymentMethod || 'cash',
+          status: b?.status || 'pending',
+          createdAt: b?.createdAt || '',
+          riderId: b?.riderId,
+          riderName: b?.riderName || 'กำลังจัดหาคนขับ...',
+          riderPhone: b?.riderPhone,
         };
         setBooking(mapped);
       } catch (e) {
@@ -145,52 +163,67 @@ const BookingDetailScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* ข้อมูลผู้ดูแล */}
+        {/* ข้อมูลการจอง */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>ข้อมูลผู้ดูแล</Text>
+          <Text style={styles.cardTitle}>ข้อมูลการจอง</Text>
+          <View style={styles.detailRow}>
+            <Ionicons name="document-text" size={20} color={colors.primary} />
+            <View style={styles.detailInfo}>
+              <Text style={styles.infoLabel}>รหัสการจอง</Text>
+              <Text style={styles.infoValue}>{booking.id.substring(0, 8).toUpperCase()}</Text>
+            </View>
+          </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="person" size={20} color={colors.primary} />
+            <View style={styles.detailInfo}>
+              <Text style={styles.infoLabel}>ประเภทผู้โดยสาร</Text>
+              <Text style={styles.infoValue}>{booking.passengerType || '-'}</Text>
+            </View>
+          </View>
+          {booking.equipment && booking.equipment.length > 0 && (
+            <View style={styles.detailRow}>
+              <Ionicons name="medkit" size={20} color={colors.primary} />
+              <View style={styles.detailInfo}>
+                <Text style={styles.infoLabel}>อุปกรณ์เสริม</Text>
+                <Text style={styles.infoValue}>{booking.equipment.join(', ')}</Text>
+              </View>
+            </View>
+          )}
+          <View style={styles.detailRow}>
+            <Ionicons name="card" size={20} color={colors.primary} />
+            <View style={styles.detailInfo}>
+              <Text style={styles.infoLabel}>วิธีชำระเงิน</Text>
+              <Text style={styles.infoValue}>
+                {booking.paymentMethod === 'cash' ? 'เงินสด' : 
+                 booking.paymentMethod === 'card' ? 'บัตรเครดิต/เดบิต' : 
+                 booking.paymentMethod === 'promptpay' ? 'พร้อมเพย์' : 'เงินสด'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ข้อมูลคนขับ */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>ข้อมูลคนขับ</Text>
           <View style={styles.caregiverContainer}>
             <View style={styles.caregiverAvatar}>
-              <Ionicons name="person" size={32} color={colors.primary} />
+              <Ionicons name="car" size={32} color={colors.primary} />
             </View>
             <View style={styles.caregiverInfo}>
-              <Text style={styles.caregiverName}>{booking.caregiver}</Text>
-              {booking.status === 'completed' && booking.rating > 0 && (
-                <View style={styles.ratingRow}>
-                  {[...Array(5)].map((_, i) => (
-                    <Ionicons
-                      key={i}
-                      name="star"
-                      size={16}
-                      color={i < booking.rating ? colors.accent : colors.mutedForeground}
-                    />
-                  ))}
-                </View>
+              <Text style={styles.caregiverName}>{booking.riderName}</Text>
+              {booking.riderId && (
+                <Text style={styles.riderId}>รหัส: {booking.riderId}</Text>
               )}
             </View>
           </View>
-          <Button variant="outline" style={styles.contactButton}>
-            <View style={styles.contactButtonContent}>
-              <Ionicons name="call" size={16} color={colors.primary} />
-              <Text style={styles.contactButtonText}>ติดต่อผู้ดูแล</Text>
-            </View>
-          </Button>
-        </View>
-
-        {/* ข้อมูลค่าใช้จ่าย */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>ข้อมูลค่าใช้จ่าย</Text>
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>ค่าบริการ</Text>
-            <Text style={styles.priceValue}>฿{booking.price}</Text>
-          </View>
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>ค่าธรรมเนียม</Text>
-            <Text style={styles.priceValue}>฿0</Text>
-          </View>
-          <View style={[styles.priceRow, styles.totalRow]}>
-            <Text style={styles.totalLabel}>รวมทั้งหมด</Text>
-            <Text style={styles.totalValue}>฿{booking.price}</Text>
-          </View>
+          {booking.riderPhone && (
+            <Button variant="outline" style={styles.contactButton}>
+              <View style={styles.contactButtonContent}>
+                <Ionicons name="call" size={16} color={colors.primary} />
+                <Text style={styles.contactButtonText}>ติดต่อคนขับ</Text>
+              </View>
+            </Button>
+          )}
         </View>
 
         {booking.status === 'completed' && (
@@ -219,6 +252,8 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   headerTitle: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 20,
     fontWeight: '600',
     color: colors.white,
@@ -234,6 +269,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   notFoundText: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.mutedForeground,
   },
@@ -255,12 +292,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardTitle: {
+    fontFamily: 'Prompt_700Bold',
+
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.foreground,
     marginBottom: 16,
   },
   status: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 14,
     fontWeight: '600',
   },
@@ -270,10 +311,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   infoLabel: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 12,
     color: colors.mutedForeground,
   },
   infoValue: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 14,
     fontWeight: '500',
     color: colors.foreground,
@@ -318,13 +363,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   caregiverName: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 14,
     fontWeight: '600',
     color: colors.foreground,
   },
+  riderId: {
+    fontFamily: 'Prompt_400Regular',
+
+    fontSize: 12,
+    color: colors.mutedForeground,
+    marginTop: 2,
+  },
   ratingRow: {
     flexDirection: 'row',
     marginTop: 4,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 16,
+  },
+  detailInfo: {
+    flex: 1,
   },
   contactButton: {
     borderColor: colors.primary,
@@ -344,10 +407,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   priceLabel: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.mutedForeground,
   },
   priceValue: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 14,
     fontWeight: '500',
     color: colors.foreground,
@@ -359,11 +426,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   totalLabel: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 16,
     fontWeight: '600',
     color: colors.foreground,
   },
   totalValue: {
+    fontFamily: 'Prompt_700Bold',
+
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.accent,

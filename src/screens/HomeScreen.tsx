@@ -9,6 +9,7 @@ import WaveHeader from '../components/WaveHeader';
 import BookingCard from '../components/BookingCard';
 import UpcomingBooking from '../components/UpcomingBooking';
 import StatCards from '../components/StatCards';
+import PromotionCarousel from '../components/PromotionCarousel';
 import colors from '../theme/colors';
 import { auth, db } from '../firebase';
 import { getAuthToken } from '../services/authStore';
@@ -18,6 +19,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 interface HomeUser {
   name?: string;
   username: string;
+  profileImage?: string;
 }
 
 const HomeScreen: React.FC = () => {
@@ -43,7 +45,8 @@ const HomeScreen: React.FC = () => {
           const userData = userDoc.data();
           setUser({ 
             name: userData?.name || '', 
-            username: userData?.username || userData?.email || '' 
+            username: userData?.username || userData?.email || '',
+            profileImage: userData?.profileImage,
           });
         } else {
           console.log('[HOME_USER_DOC_NOT_FOUND]');
@@ -80,7 +83,6 @@ const HomeScreen: React.FC = () => {
   }, []);
 
   const displayName = user?.name || user?.username || 'ผู้ใช้ใหม่';
-  const avatarUri = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face';
 
   return (
     <View style={styles.container}>
@@ -89,7 +91,13 @@ const HomeScreen: React.FC = () => {
           <View style={styles.headerContent}>
             <View style={styles.userInfo}>
               <TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'Profile' } as any)}>
-                <Image source={{ uri: avatarUri }} style={styles.avatar} />
+                {user?.profileImage ? (
+                  <Image source={{ uri: user.profileImage }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                    <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
+                  </View>
+                )}
               </TouchableOpacity>
               <View style={styles.greeting}>
                 <Text style={styles.greetingText}>สวัสดี</Text>
@@ -123,6 +131,7 @@ const HomeScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <BookingCard />
+        <PromotionCarousel />
         <UpcomingBooking />
         <StatCards />
       </ScrollView>
@@ -154,19 +163,33 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
+  avatarPlaceholder: {
+    backgroundColor: colors.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontFamily: 'Prompt_700Bold',
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
   greeting: {
     gap: 2,
   },
   greetingText: {
+    fontFamily: 'Prompt_400Regular',
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.8)',
   },
   userName: {
+    fontFamily: 'Prompt_700Bold',
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.white,
   },
   welcomeBack: {
+    fontFamily: 'Prompt_400Regular',
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.7)',
   },
@@ -190,6 +213,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   badgeText: {
+    fontFamily: 'Prompt_700Bold',
     fontSize: 12,
     fontWeight: 'bold',
     color: colors.white,

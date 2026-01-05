@@ -183,6 +183,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
+    fontFamily: 'Prompt_700Bold',
+
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.foreground,
@@ -195,6 +197,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   markAllText: {
+    fontFamily: 'Prompt_500Medium',
+
     fontSize: 14,
     color: colors.primary,
     fontWeight: '500',
@@ -208,6 +212,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   unreadText: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.primary,
   },
@@ -235,6 +241,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   notificationIcon: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 24,
   },
   notificationText: {
@@ -247,6 +255,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   notificationTitle: {
+    fontFamily: 'Prompt_600SemiBold',
+
     fontSize: 14,
     fontWeight: '600',
     color: colors.mutedForeground,
@@ -261,11 +271,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   notificationMessage: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.mutedForeground,
     marginBottom: 8,
   },
   notificationTime: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 12,
     color: colors.mutedForeground,
   },
@@ -274,6 +288,8 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
   },
   emptyText: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.mutedForeground,
     marginTop: 12,
@@ -285,6 +301,8 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
   },
   loadingText: {
+    fontFamily: 'Prompt_400Regular',
+
     fontSize: 14,
     color: colors.mutedForeground,
     marginTop: 12,
