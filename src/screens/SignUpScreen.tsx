@@ -23,6 +23,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 const SignUpScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [formData, setFormData] = useState({
+    email: '',
     name: '',
     username: '',
     idCard: '',
@@ -32,6 +33,7 @@ const SignUpScreen: React.FC = () => {
   const handleSubmit = () => {
     // เก็บข้อมูลพื้นฐานไว้ชั่วคราว เพื่อนำไปอัปเดตโปรไฟล์หลังจากสมัคร/ล็อกอินสำเร็จ
     setPendingProfile({
+      email: formData.email,
       name: formData.name,
       phone: formData.phone,
     });
@@ -57,6 +59,15 @@ const SignUpScreen: React.FC = () => {
           </View>
 
           <View style={styles.form}>
+            <Input
+              label="อีเมล"
+              placeholder="กรอกอีเมลของคุณ"
+              value={formData.email}
+              onChangeText={(text) => setFormData({ ...formData, email: text })}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
             <Input
               label="ชื่อ-นามสกุล"
               placeholder="กรอกชื่อ-นามสกุลของคุณ"

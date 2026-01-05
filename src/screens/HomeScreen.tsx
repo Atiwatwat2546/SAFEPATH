@@ -10,7 +10,8 @@ import BookingCard from '../components/BookingCard';
 import UpcomingBooking from '../components/UpcomingBooking';
 import StatCards from '../components/StatCards';
 import colors from '../theme/colors';
-import { apiFetch } from '../services/api';
+import { auth, db } from '../firebase';
+import { getAuthToken } from '../services/authStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -28,14 +29,26 @@ const HomeScreen: React.FC = () => {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const res = await apiFetch('/api/auth/me');
-        if (!res.ok) {
-          console.log('[HOME_USER_LOAD_ERROR]', res.status);
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          console.log('[HOME_USER_NOT_LOGGED_IN]');
           setUser(null);
+          setLoadingUser(false);
           return;
         }
-        const data = await res.json();
-        setUser({ name: data.name, username: data.username });
+
+        // ดึงข้อมูลผู้ใช้จาก Firestore
+        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          setUser({ 
+            name: userData?.name || '', 
+            username: userData?.username || userData?.email || '' 
+          });
+        } else {
+          console.log('[HOME_USER_DOC_NOT_FOUND]');
+          setUser(null);
+        }
       } catch (e) {
         console.log('[HOME_USER_LOAD_EXCEPTION]', e);
         setUser(null);
@@ -46,12 +59,17 @@ const HomeScreen: React.FC = () => {
 
     const loadNotifications = async () => {
       try {
-        const res = await apiFetch('/api/notifications');
-        if (res.ok) {
-          const data = await res.json();
-          const unread = data.filter((n: any) => !n.read).length;
-          setUnreadCount(unread);
-        }
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
+
+        const notificationsSnapshot = await db.collection('notifications')
+          .where('userId', '==', currentUser.uid)
+          .get();
+        
+        const unread = notificationsSnapshot.docs.filter(
+          doc => !doc.data().read
+        ).length;
+        setUnreadCount(unread);
       } catch (e) {
         console.log('[HOME_NOTIFICATIONS_LOAD_EXCEPTION]', e);
       }

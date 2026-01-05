@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions, ActivityIndicator, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, Region } from 'react-native-maps';
+import * as Location from 'expo-location';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Input from '../components/ui/input';
 import Button from '../components/ui/button';
@@ -23,22 +25,89 @@ const { width } = Dimensions.get('window');
 
 const Booking1Screen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+  const mapRef = useRef<MapView>(null);
   const [fromAddress, setFromAddress] = useState('');
   const [toAddress, setToAddress] = useState('');
   const [fromLocation, setFromLocation] = useState<Location | null>(null);
   const [toLocation, setToLocation] = useState<Location | null>(null);
-
-  useEffect(() => {
-    clearPendingBooking();
-  }, []);
-
-  // Default to Bangkok coordinates
-  const defaultRegion = {
+  const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
+  const [loadingLocation, setLoadingLocation] = useState(false);
+  const [region, setRegion] = useState<Region>({
     latitude: 13.7563,
     longitude: 100.5018,
     latitudeDelta: 0.05,
     longitudeDelta: 0.05,
+  });
+
+  useEffect(() => {
+    clearPendingBooking();
+    getCurrentLocation();
+  }, []);
+
+  const getCurrentLocation = async () => {
+    try {
+      setLoadingLocation(true);
+      
+      // ขอ permission
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('ไม่ได้รับอนุญาต', 'กรุณาอนุญาตให้แอปเข้าถึงตำแหน่งของคุณ');
+        return;
+      }
+
+      // ดึงตำแหน่งปัจจุบัน
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const currentLoc: Location = {
+        lat: location.coords.latitude,
+        lng: location.coords.longitude,
+      };
+
+      setCurrentLocation(currentLoc);
+      
+      // อัปเดตแมพให้แสดงตำแหน่งปัจจุบัน
+      const newRegion = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+      setRegion(newRegion);
+      mapRef.current?.animateToRegion(newRegion, 1000);
+
+      // ดึงชื่อสถานที่จากพิกัด
+      const addresses = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      if (addresses.length > 0) {
+        const addr = addresses[0];
+        const addressString = `${addr.street || ''} ${addr.district || ''} ${addr.city || ''} ${addr.region || ''}`.trim();
+        currentLoc.address = addressString;
+      }
+
+      setCurrentLocation(currentLoc);
+    } catch (error) {
+      console.log('[LOCATION_ERROR]', error);
+      Alert.alert('ข้อผิดพลาด', 'ไม่สามารถดึงตำแหน่งปัจจุบันได้');
+    } finally {
+      setLoadingLocation(false);
+    }
   };
+
+  const useCurrentLocationAsOrigin = () => {
+    if (!currentLocation) {
+      Alert.alert('ไม่พบตำแหน่ง', 'กรุณารอสักครู่แล้วลองใหม่อีกครั้ง');
+      return;
+    }
+    setFromLocation(currentLocation);
+    setFromAddress(currentLocation.address || 'ตำแหน่งปัจจุบัน');
+    Alert.alert('สำเร็จ', 'ใช้ตำแหน่งปัจจุบันเป็นต้นทางแล้ว');
+  };
+
 
   const handleNext = () => {
     if (!fromAddress || !toAddress) {
@@ -89,9 +158,22 @@ const Booking1Screen: React.FC = () => {
       <View style={styles.content}>
         <View style={styles.mapContainer}>
           <MapView
+            ref={mapRef}
             style={styles.map}
-            initialRegion={defaultRegion}
+            region={region}
+            onRegionChangeComplete={setRegion}
           >
+            {currentLocation && (
+              <Marker
+                coordinate={{
+                  latitude: currentLocation.lat,
+                  longitude: currentLocation.lng,
+                }}
+                title="ตำแหน่งปัจจุบัน"
+                description={currentLocation.address}
+                pinColor="blue"
+              />
+            )}
             {fromLocation && (
               <Marker
                 coordinate={{
@@ -117,29 +199,127 @@ const Booking1Screen: React.FC = () => {
 
         <View style={styles.formCard}>
           <View style={styles.inputContainer}>
-            <View style={styles.inputRow}>
+            <View style={[styles.inputRow, { zIndex: 2 }]}>
               <View style={[styles.dot, { backgroundColor: colors.primary }]} />
               <View style={styles.inputWrapper}>
-                <Text style={styles.inputLabel}>ต้นทาง (รับผู้โดยสาร)</Text>
-                <Input
-                  placeholder="ระบุสถานที่ต้นทาง"
-                  value={fromAddress}
-                  onChangeText={setFromAddress}
-                  containerStyle={styles.input}
-                />
+                <View style={styles.labelRow}>
+                  <Text style={styles.inputLabel}>ต้นทาง (รับผู้โดยสาร)</Text>
+                  <TouchableOpacity 
+                    onPress={useCurrentLocationAsOrigin}
+                    style={styles.locationButton}
+                    disabled={loadingLocation}
+                  >
+                    {loadingLocation ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <>
+                        <Ionicons name="locate" size={16} color={colors.primary} />
+                        <Text style={styles.locationButtonText}>ใช้ตำแหน่งปัจจุบัน</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.autocompleteContainer}>
+                  <GooglePlacesAutocomplete
+                    placeholder="ค้นหาสถานที่ต้นทาง"
+                    minLength={2}
+                    autoFocus={false}
+                    returnKeyType={'search'}
+                    listViewDisplayed='auto'
+                    onPress={(data, details = null) => {
+                      setFromAddress(data.description);
+                      if (details) {
+                        setFromLocation({
+                          lat: details.geometry.location.lat,
+                          lng: details.geometry.location.lng,
+                          address: data.description,
+                        });
+                        const newRegion = {
+                          latitude: details.geometry.location.lat,
+                          longitude: details.geometry.location.lng,
+                          latitudeDelta: 0.01,
+                          longitudeDelta: 0.01,
+                        };
+                        mapRef.current?.animateToRegion(newRegion, 1000);
+                      }
+                    }}
+                    query={{
+                      key: 'AIzaSyCgHgxgROSk5dGqEX6s_pHG5mftBKXtG_I',
+                      language: 'th',
+                      types: 'establishment',
+                      components: 'country:th',
+                    }}
+                    fetchDetails={true}
+                    enablePoweredByContainer={false}
+                    debounce={400}
+                    styles={{
+                      textInputContainer: styles.googleInputContainer,
+                      textInput: styles.googleInput,
+                      listView: styles.googleListView,
+                      row: styles.googleRow,
+                      description: styles.googleDescription,
+                      poweredContainer: { display: 'none' },
+                    }}
+                    textInputProps={{
+                      placeholderTextColor: colors.mutedForeground,
+                    }}
+                  />
+                </View>
               </View>
             </View>
 
-            <View style={styles.inputRow}>
+            <View style={[styles.inputRow, { zIndex: 1 }]}>
               <View style={[styles.dot, { backgroundColor: colors.destructive }]} />
               <View style={styles.inputWrapper}>
                 <Text style={styles.inputLabel}>ปลายทาง (ส่งผู้โดยสาร)</Text>
-                <Input
-                  placeholder="ระบุสถานที่ปลายทาง"
-                  value={toAddress}
-                  onChangeText={setToAddress}
-                  containerStyle={styles.input}
-                />
+                <View style={styles.autocompleteContainer}>
+                  <GooglePlacesAutocomplete
+                    placeholder="ค้นหาชื่อสถานที่ปลายทาง"
+                    minLength={2}
+                    autoFocus={false}
+                    returnKeyType={'search'}
+                    listViewDisplayed='auto'
+                    onPress={(data, details = null) => {
+                      setToAddress(data.description);
+                      if (details) {
+                        setToLocation({
+                          lat: details.geometry.location.lat,
+                          lng: details.geometry.location.lng,
+                          address: data.description,
+                        });
+                        // อัปเดตแมพให้แสดงปลายทาง
+                        const newRegion = {
+                          latitude: details.geometry.location.lat,
+                          longitude: details.geometry.location.lng,
+                          latitudeDelta: 0.01,
+                          longitudeDelta: 0.01,
+                        };
+                        mapRef.current?.animateToRegion(newRegion, 1000);
+                      }
+                    }}
+                    query={{
+                      key: 'AIzaSyCgHgxgROSk5dGqEX6s_pHG5mftBKXtG_I',
+                      language: 'th',
+                      types: 'establishment',
+                      components: 'country:th',
+                    }}
+                    fetchDetails={true}
+                    enablePoweredByContainer={false}
+                    debounce={400}
+                    styles={{
+                      textInputContainer: styles.googleInputContainer,
+                      textInput: styles.googleInput,
+                      listView: styles.googleListView,
+                      row: styles.googleRow,
+                      description: styles.googleDescription,
+                      poweredContainer: { display: 'none' },
+                    }}
+                    textInputProps={{
+                      placeholderTextColor: colors.mutedForeground,
+                    }}
+                  />
+                </View>
+                <Text style={styles.helperText}>💡 พิมพ์ชื่อสถานที่ เช่น "สนามบินสุวรรณภูมิ"</Text>
               </View>
             </View>
           </View>
@@ -228,7 +408,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   inputContainer: {
-    gap: 16,
+    gap: 32,
   },
   inputRow: {
     flexDirection: 'row',
@@ -244,14 +424,79 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flex: 1,
   },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   inputLabel: {
     fontSize: 14,
     fontWeight: '500',
     color: colors.foreground,
-    marginBottom: 8,
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: colors.primary + '15',
+  },
+  locationButtonText: {
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: '500',
+  },
+  helperText: {
+    fontSize: 12,
+    color: colors.mutedForeground,
+    marginTop: 4,
   },
   input: {
     marginBottom: 0,
+  },
+  autocompleteContainer: {
+    flex: 1,
+    zIndex: 999,
+    position: 'relative',
+  },
+  googleInputContainer: {
+    backgroundColor: 'transparent',
+    borderTopWidth: 0,
+    borderBottomWidth: 0,
+    paddingHorizontal: 0,
+  },
+  googleInput: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: colors.foreground,
+    height: 48,
+  },
+  googleListView: {
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+    maxHeight: 200,
+  },
+  googleRow: {
+    backgroundColor: colors.card,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  googleDescription: {
+    fontSize: 14,
+    color: colors.foreground,
   },
   nextButton: {
     marginTop: 24,

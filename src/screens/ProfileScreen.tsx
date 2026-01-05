@@ -4,11 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import WaveHeader from '../components/WaveHeader';
 import ProfileInfo from '../components/ProfileInfo';
 import colors from '../theme/colors';
-import { apiFetch } from '../services/api';
+import { auth, db } from '../firebase';
 
 interface ProfileData {
   name?: string;
-  username: string;
+  username?: string;
+  email?: string;
+  phone?: string;
+  birthDate?: string;
+  gender?: string;
+  address?: string;
 }
 
 const ProfileScreen: React.FC = () => {
@@ -18,14 +23,31 @@ const ProfileScreen: React.FC = () => {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const res = await apiFetch('/api/auth/me');
-        if (!res.ok) {
-          console.log('[PROFILE_LOAD_ERROR]', res.status);
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          console.log('[PROFILE_USER_NOT_LOGGED_IN]');
           setProfile(null);
+          setLoading(false);
           return;
         }
-        const data = await res.json();
-        setProfile({ name: data.name, username: data.username });
+
+        // ดึงข้อมูลผู้ใช้จาก Firestore
+        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          setProfile({
+            name: userData?.name || '',
+            username: userData?.username || '',
+            email: userData?.email || currentUser.email || '',
+            phone: userData?.phone || '',
+            birthDate: userData?.birthDate || '',
+            gender: userData?.gender || '',
+            address: userData?.address || '',
+          });
+        } else {
+          console.log('[PROFILE_DOC_NOT_FOUND]');
+          setProfile(null);
+        }
       } catch (e) {
         console.log('[PROFILE_LOAD_EXCEPTION]', e);
         setProfile(null);
@@ -37,7 +59,7 @@ const ProfileScreen: React.FC = () => {
     loadProfile();
   }, []);
 
-  const displayName = profile?.name || profile?.username || 'ผู้ใช้ใหม่';
+  const displayName = profile?.name || profile?.username || profile?.email || 'ผู้ใช้ใหม่';
   const avatarUri = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face';
 
   return (

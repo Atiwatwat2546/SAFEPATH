@@ -10,6 +10,7 @@ import LoginScreen from '../screens/LoginScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import SignUp2Screen from '../screens/SignUp2Screen';
 import SignUp3Screen from '../screens/SignUp3Screen';
+import SignUp4Screen from '../screens/SignUp4Screen';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
@@ -29,6 +30,7 @@ export type RootStackParamList = {
   SignUp: undefined;
   SignUp2: undefined;
   SignUp3: undefined;
+  SignUp4: undefined;
   MainTabs: undefined;
   Notifications: undefined;
   EditProfile: undefined;
@@ -101,6 +103,7 @@ export default function AppNavigator() {
       <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="SignUp2" component={SignUp2Screen} />
       <Stack.Screen name="SignUp3" component={SignUp3Screen} />
+      <Stack.Screen name="SignUp4" component={SignUp4Screen} />
       <Stack.Screen name="MainTabs" component={BottomTabs} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />

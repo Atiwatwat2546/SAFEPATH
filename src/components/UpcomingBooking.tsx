@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../theme/colors';
-import { apiFetch } from '../services/api';
+import { auth, db } from '../firebase';
 
 interface Upcoming {
   date: string;
@@ -17,19 +17,25 @@ const UpcomingBooking: React.FC = () => {
   useEffect(() => {
     const loadUpcoming = async () => {
       try {
-        const res = await apiFetch('/api/bookings');
-        if (!res.ok) {
-          console.log('[UPCOMING_LOAD_ERROR]', res.status);
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          console.log('[UPCOMING_USER_NOT_LOGGED_IN]');
           setUpcoming(null);
           return;
         }
-        const data = await res.json();
-        const upcomingList = (data || []).filter((b: any) => b.status === 'upcoming');
-        if (upcomingList.length === 0) {
+
+        const bookingsSnapshot = await db.collection('bookings')
+          .where('userId', '==', currentUser.uid)
+          .where('status', '==', 'upcoming')
+          .limit(1)
+          .get();
+        
+        if (bookingsSnapshot.empty) {
           setUpcoming(null);
           return;
         }
-        const b = upcomingList[0];
+
+        const b = bookingsSnapshot.docs[0].data();
         setUpcoming({
           date: b.date,
           time: b.time,

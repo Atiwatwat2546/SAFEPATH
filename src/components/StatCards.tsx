@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import colors from '../theme/colors';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { apiFetch } from '../services/api';
+import { auth, db } from '../firebase';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -18,13 +18,17 @@ const StatCards: React.FC = () => {
   useEffect(() => {
     const loadStats = async () => {
       try {
-        const res = await apiFetch('/api/bookings');
-        if (!res.ok) {
-          console.log('[STATS_LOAD_ERROR]', res.status);
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          console.log('[STATS_USER_NOT_LOGGED_IN]');
           return;
         }
-        const data = await res.json();
-        const all = Array.isArray(data) ? data : [];
+
+        const bookingsSnapshot = await db.collection('bookings')
+          .where('userId', '==', currentUser.uid)
+          .get();
+        
+        const all = bookingsSnapshot.docs.map(doc => doc.data());
         const completed = all.filter((b: any) => b.status === 'completed');
         setServiceCount(completed.length);
         setTripCount(all.length);

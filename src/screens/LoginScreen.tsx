@@ -18,8 +18,7 @@ import Input from '../components/ui/input';
 import Button from '../components/ui/button';
 import colors from '../theme/colors';
 import { setAuthToken } from '../services/authStore';
-import { apiFetch } from '../services/api';
-import { clearPendingProfile, getPendingProfile } from '../services/signupStore';
+import { auth } from '../firebase';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -37,16 +36,13 @@ try {
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: '',
-    confirmPassword: '',
   });
 
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleAvailable, setGoogleAvailable] = useState(false);
-
-  const baseURL = 'http://192.168.1.13:4001';
 
   useEffect(() => {
     if (GoogleSignin) {
@@ -64,13 +60,8 @@ const LoginScreen: React.FC = () => {
   }, []);
 
   const handleSubmit = async () => {
-    if (!formData.username || !formData.password) {
-      Alert.alert('กรุณากรอกข้อมูล', 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      Alert.alert('รหัสผ่านไม่ตรงกัน', 'โปรดยืนยันรหัสผ่านให้ตรงกัน');
+    if (!formData.email || !formData.password) {
+      Alert.alert('กรุณากรอกข้อมูล', 'กรุณากรอกอีเมลและรหัสผ่าน');
       return;
     }
 
@@ -79,121 +70,45 @@ const LoginScreen: React.FC = () => {
     try {
       setLoading(true);
 
-      console.log('[LOGIN_SUBMIT]', {
-        username: formData.username,
+      console.log('[FIREBASE_LOGIN_SUBMIT]', {
+        email: formData.email,
         time: new Date().toISOString(),
       });
 
-      // ลองล็อกอินก่อน
-      const loginResponse = await fetch(`${baseURL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: formData.username,
-          password: formData.password,
-        }),
+      // เข้าสู่ระบบด้วย Firebase Authentication
+      const userCredential = await auth.signInWithEmailAndPassword(formData.email, formData.password);
+      const user = userCredential.user;
+
+      // เก็บ UID เป็น session token
+      setAuthToken(user!.uid);
+
+      console.log('[FIREBASE_LOGIN_SUCCESS]', {
+        email: formData.email,
+        uid: user!.uid,
+        time: new Date().toISOString(),
       });
 
-      if (loginResponse.ok) {
-        const loginData = await loginResponse.json();
-        setAuthToken(loginData.token);
-        const pending = getPendingProfile();
-        if (pending) {
-          try {
-            const res = await apiFetch('/api/users/me', {
-              method: 'PUT',
-              body: JSON.stringify(pending),
-            });
-            if (!res.ok) {
-              console.log('[LOGIN_PROFILE_UPDATE_ERROR]', res.status);
-            }
-          } catch (e) {
-            console.log('[LOGIN_PROFILE_UPDATE_EXCEPTION]', e);
-          } finally {
-            clearPendingProfile();
-          }
-        }
-        console.log('[LOGIN_SUCCESS]', {
-          username: formData.username,
-          userId: loginData.user?.id,
-          time: new Date().toISOString(),
-        });
-        navigation.navigate('MainTabs');
-        return;
+      navigation.navigate('MainTabs');
+    } catch (error: any) {
+      console.log('[FIREBASE_LOGIN_ERROR]', {
+        email: formData.email,
+        error: error.code,
+        time: new Date().toISOString(),
+      });
+
+      let errorMessage = 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง';
+      
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+        errorMessage = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง\nกรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'รูปแบบอีเมลไม่ถูกต้อง';
+      } else if (error.code === 'auth/user-disabled') {
+        errorMessage = 'บัญชีนี้ถูกระงับการใช้งาน';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'มีการพยายามเข้าสู่ระบบมากเกินไป กรุณารอสักครู่';
       }
 
-      // ถ้าล็อกอินไม่ได้ (เช่น user ยังไม่มี) ให้ลองสมัครใหม่
-      if (loginResponse.status === 401) {
-        console.log('[LOGIN_FAILED_TRY_REGISTER]', {
-          username: formData.username,
-          status: loginResponse.status,
-          time: new Date().toISOString(),
-        });
-
-        const registerResponse = await fetch(`${baseURL}/api/auth/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username: formData.username,
-            password: formData.password,
-            // ฟิลด์อื่น ๆ ไว้ค่อยเชื่อมกับ SignUp screens ภายหลัง
-          }),
-        });
-
-        if (!registerResponse.ok) {
-          const text = await registerResponse.text();
-          console.log('[REGISTER_ERROR]', {
-            username: formData.username,
-            status: registerResponse.status,
-            body: text,
-            time: new Date().toISOString(),
-          });
-          Alert.alert('ไม่สามารถสร้างบัญชีได้', 'โปรดลองใหม่อีกครั้ง');
-          return;
-        }
-        const registerData = await registerResponse.json();
-        setAuthToken(registerData.token);
-        const pending = getPendingProfile();
-        if (pending) {
-          try {
-            const res = await apiFetch('/api/users/me', {
-              method: 'PUT',
-              body: JSON.stringify(pending),
-            });
-            if (!res.ok) {
-              console.log('[REGISTER_PROFILE_UPDATE_ERROR]', res.status);
-            }
-          } catch (e) {
-            console.log('[REGISTER_PROFILE_UPDATE_EXCEPTION]', e);
-          } finally {
-            clearPendingProfile();
-          }
-        }
-        console.log('[REGISTER_SUCCESS]', {
-          username: formData.username,
-          userId: registerData.user?.id,
-          time: new Date().toISOString(),
-        });
-
-        navigation.navigate('MainTabs');
-        return;
-      }
-
-      const errorText = await loginResponse.text();
-      console.log('[LOGIN_ERROR_UNEXPECTED]', {
-        username: formData.username,
-        status: loginResponse.status,
-        body: errorText,
-        time: new Date().toISOString(),
-      });
-      Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถเข้าสู่ระบบได้ โปรดลองอีกครั้ง');
-    } catch (error) {
-      console.log('[LOGIN_NETWORK_ERROR]', {
-        username: formData.username,
-        error,
-        time: new Date().toISOString(),
-      });
-      Alert.alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', 'กรุณาตรวจสอบว่า backend รันอยู่ที่พอร์ต 4001');
+      Alert.alert('เข้าสู่ระบบไม่สำเร็จ', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -257,24 +172,20 @@ const LoginScreen: React.FC = () => {
         },
         {
           text: 'ส่ง',
-          onPress: async (email) => {
+          onPress: async (email: string) => {
             if (!email) {
               Alert.alert('ข้อผิดพลาด', 'กรุณากรอกอีเมล');
               return;
             }
             try {
-              const response = await fetch(`${baseURL}/api/auth/forgot-password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email }),
-              });
-              if (response.ok) {
-                Alert.alert('สำเร็จ', 'ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว');
-              } else {
+              await auth.sendPasswordResetEmail(email);
+              Alert.alert('สำเร็จ', 'ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว');
+            } catch (error: any) {
+              if (error.code === 'auth/user-not-found') {
                 Alert.alert('ข้อผิดพลาด', 'ไม่พบอีเมลนี้ในระบบ');
+              } else {
+                Alert.alert('ข้อผิดพลาด', 'ไม่สามารถส่งอีเมลได้ กรุณาลองใหม่อีกครั้ง');
               }
-            } catch (error) {
-              Alert.alert('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
             }
           },
         },
@@ -289,7 +200,7 @@ const LoginScreen: React.FC = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.white} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>สร้างบัญชี</Text>
+        <Text style={styles.headerTitle}>เข้าสู่ระบบ</Text>
       </View>
 
       <KeyboardAvoidingView
@@ -304,10 +215,12 @@ const LoginScreen: React.FC = () => {
 
           <View style={styles.form}>
             <Input
-              label="ชื่อผู้ใช้"
-              placeholder="กรอกชื่อผู้ใช้ของคุณ"
-              value={formData.username}
-              onChangeText={(text) => setFormData({ ...formData, username: text })}
+              label="อีเมล"
+              placeholder="กรอกอีเมลของคุณ"
+              value={formData.email}
+              onChangeText={(text) => setFormData({ ...formData, email: text })}
+              keyboardType="email-address"
+              autoCapitalize="none"
             />
 
             <Input
@@ -318,13 +231,7 @@ const LoginScreen: React.FC = () => {
               secureTextEntry
             />
 
-            <Input
-              label="ยืนยันรหัสผ่าน"
-              placeholder="ยืนยันรหัสผ่านของคุณ"
-              value={formData.confirmPassword}
-              onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
-              secureTextEntry
-            />
+            {null}
 
             <TouchableOpacity style={styles.forgotPassword} onPress={handleForgotPassword}>
               <Text style={styles.forgotPasswordText}>ลืมรหัสผ่าน</Text>

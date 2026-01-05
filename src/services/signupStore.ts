@@ -1,8 +1,13 @@
 export interface PendingProfile {
+  email?: string;
+  password?: string;
   name?: string;
+  username?: string;
+  idCard?: string;
   phone?: string;
   birthDate?: string;
   gender?: string;
+  occupation?: string;
   address?: string;
 }
 
