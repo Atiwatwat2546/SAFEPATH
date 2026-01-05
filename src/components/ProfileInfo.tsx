@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { userData } from '../data/mockData';
 import colors from '../theme/colors';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { apiFetch } from '../services/api';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -17,34 +17,60 @@ interface InfoItem {
 
 const ProfileInfo: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+  const [infoItems, setInfoItems] = useState<InfoItem[] | null>(null);
 
-  const infoItems: InfoItem[] = [
-    { icon: 'mail', label: 'อีเมล', value: userData.email },
-    { icon: 'call', label: 'เบอร์โทรศัพท์', value: userData.phone },
-    { icon: 'calendar', label: 'วันเกิด', value: userData.birthDate },
-    { icon: 'person', label: 'เพศ', value: userData.gender },
-    { icon: 'location', label: 'ที่อยู่', value: userData.address },
-  ];
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await apiFetch('/api/auth/me');
+        if (!res.ok) {
+          console.log('[PROFILE_INFO_LOAD_ERROR]', res.status);
+          setInfoItems([]);
+          return;
+        }
+        const data = await res.json();
+        const items: InfoItem[] = [
+          { icon: 'mail', label: 'อีเมล', value: data.email || '-' },
+          { icon: 'call', label: 'เบอร์โทรศัพท์', value: data.phone || '-' },
+          { icon: 'calendar', label: 'วันเกิด', value: data.birthDate || '-' },
+          { icon: 'person', label: 'เพศ', value: data.gender || '-' },
+          { icon: 'location', label: 'ที่อยู่', value: data.address || '-' },
+        ];
+        setInfoItems(items);
+      } catch (e) {
+        console.log('[PROFILE_INFO_LOAD_EXCEPTION]', e);
+        setInfoItems([]);
+      }
+    };
+
+    load();
+  }, []);
 
   return (
     <View style={styles.container}>
-      {infoItems.map((item, index) => (
-        <View
-          key={item.label}
-          style={[
-            styles.infoRow,
-            index !== infoItems.length - 1 && styles.borderBottom,
-          ]}
-        >
-          <View style={styles.iconContainer}>
-            <Ionicons name={item.icon} size={16} color={colors.primary} />
-          </View>
-          <View style={styles.textContainer}>
-            <Text style={styles.label}>{item.label}</Text>
-            <Text style={styles.value}>{item.value}</Text>
-          </View>
+      {infoItems === null ? (
+        <View style={styles.loadingRow}>
+          <ActivityIndicator color={colors.primary} />
         </View>
-      ))}
+      ) : (
+        infoItems.map((item, index) => (
+          <View
+            key={item.label}
+            style={[
+              styles.infoRow,
+              index !== infoItems.length - 1 && styles.borderBottom,
+            ]}
+          >
+            <View style={styles.iconContainer}>
+              <Ionicons name={item.icon} size={16} color={colors.primary} />
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.label}>{item.label}</Text>
+              <Text style={styles.value}>{item.value}</Text>
+            </View>
+          </View>
+        ))
+      )}
 
       <TouchableOpacity
         style={styles.editButton}

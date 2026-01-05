@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -6,15 +6,29 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import ServiceHistoryItem from '../components/ServiceHistoryItem';
-import { serviceHistory } from '../data/mockData';
 import colors from '../theme/colors';
+import { apiFetch } from '../services/api';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type TabType = 'all' | 'completed' | 'cancelled';
 
+interface HistoryBooking {
+  id: string;
+  date: string;
+  time: string;
+  from: string;
+  to: string;
+  caregiver: string;
+  price: number;
+  status: string;
+  rating: number;
+}
+
 const HistoryScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [activeTab, setActiveTab] = useState<TabType>('all');
+  const [history, setHistory] = useState<HistoryBooking[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const tabs: { key: TabType; label: string }[] = [
     { key: 'all', label: 'ทั้งหมด' },
@@ -22,7 +36,43 @@ const HistoryScreen: React.FC = () => {
     { key: 'cancelled', label: 'ยกเลิก' },
   ];
 
-  const filteredHistory = serviceHistory.filter((booking) => {
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        setLoading(true);
+        const res = await apiFetch('/api/bookings');
+        if (!res.ok) {
+          console.log('[HISTORY_LOAD_ERROR]', res.status);
+          setHistory([]);
+          return;
+        }
+        const data = await res.json();
+
+        const mapped: HistoryBooking[] = (data || []).map((b: any) => ({
+          id: b.id,
+          date: b.date,
+          time: b.time,
+          from: b.fromAddress,
+          to: b.toAddress,
+          caregiver: '',
+          price: 0,
+          status: b.status,
+          rating: 0,
+        }));
+
+        setHistory(mapped);
+      } catch (e) {
+        console.log('[HISTORY_LOAD_EXCEPTION]', e);
+        setHistory([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadHistory();
+  }, []);
+
+  const filteredHistory = history.filter((booking) => {
     if (activeTab === 'all') return true;
     return booking.status === activeTab;
   });
@@ -65,7 +115,9 @@ const HistoryScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>ไม่พบประวัติการใช้บริการ</Text>
+            <Text style={styles.emptyText}>
+              {loading ? 'กำลังโหลดประวัติการใช้บริการ...' : 'ไม่พบประวัติการใช้บริการ'}
+            </Text>
           </View>
         }
       />

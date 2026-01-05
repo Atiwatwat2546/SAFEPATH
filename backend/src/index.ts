@@ -9,6 +9,23 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 app.use(cors());
 app.use(express.json());
 
+// Simple request logger for debugging
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  // Avoid logging very large bodies
+  const bodyString = JSON.stringify(req.body);
+  const truncatedBody = bodyString.length > 500 ? bodyString.slice(0, 500) + '...<truncated>' : bodyString;
+
+  console.log('[BACKEND REQUEST]', {
+    method: req.method,
+    path: req.path,
+    query: req.query,
+    body: truncatedBody,
+    time: new Date().toISOString(),
+  });
+
+  next();
+});
+
 // In-memory data stores
 interface User {
   id: string;

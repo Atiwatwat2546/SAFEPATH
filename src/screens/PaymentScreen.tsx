@@ -27,8 +27,7 @@ const PaymentScreen: React.FC = () => {
     try {
       setLoading(true);
 
-      // TODO: ปรับ baseURL ให้เป็น IP ของเครื่องเมื่อรันบนมือถือจริง
-      const baseURL = 'http://localhost:4001';
+      const baseURL = 'http://192.168.1.13:4001';
 
       const response = await fetch(`${baseURL}/api/payments`, {
         method: 'POST',

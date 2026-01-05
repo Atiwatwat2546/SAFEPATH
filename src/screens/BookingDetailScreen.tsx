@@ -1,23 +1,76 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Button from '../components/ui/button';
-import { serviceHistory } from '../data/mockData';
 import colors from '../theme/colors';
+import { apiFetch } from '../services/api';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type RouteProps = RouteProp<RootStackParamList, 'BookingDetail'>;
+
+interface DetailBooking {
+  id: string;
+  date: string;
+  time: string;
+  from: string;
+  to: string;
+  caregiver: string;
+  price: number;
+  status: string;
+  rating: number;
+}
 
 const BookingDetailScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProps>();
   const { id } = route.params;
+  const [booking, setBooking] = useState<DetailBooking | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const booking = serviceHistory.find((b) => b.id === id);
+  useEffect(() => {
+    const loadDetail = async () => {
+      try {
+        const res = await apiFetch(`/api/bookings/${id}`);
+        if (!res.ok) {
+          console.log('[BOOKING_DETAIL_ERROR]', res.status);
+          setBooking(null);
+          return;
+        }
+        const b = await res.json();
+        const mapped: DetailBooking = {
+          id: b.id,
+          date: b.date,
+          time: b.time,
+          from: b.fromAddress,
+          to: b.toAddress,
+          caregiver: '',
+          price: 0,
+          status: b.status,
+          rating: 0,
+        };
+        setBooking(mapped);
+      } catch (e) {
+        console.log('[BOOKING_DETAIL_EXCEPTION]', e);
+        setBooking(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDetail();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <View style={styles.notFoundContainer}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
 
   if (!booking) {
     return (

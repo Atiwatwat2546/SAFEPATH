@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -18,31 +18,81 @@ import Toast from 'react-native-toast-message';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import Input from '../components/ui/input';
 import Button from '../components/ui/button';
-import { userData } from '../data/mockData';
 import colors from '../theme/colors';
+import { apiFetch } from '../services/api';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const EditProfileScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [formData, setFormData] = useState({
-    name: userData.name,
-    email: userData.email,
-    phone: userData.phone,
-    birthDate: userData.birthDate,
-    gender: userData.gender,
-    address: userData.address,
+    name: '',
+    email: '',
+    phone: '',
+    birthDate: '',
+    gender: '',
+    address: '',
   });
+  const [loading, setLoading] = useState(true);
 
-  const handleSave = () => {
-    Toast.show({
-      type: 'success',
-      text1: 'บันทึกสำเร็จ',
-      text2: 'ข้อมูลส่วนตัวของคุณได้รับการอัปเดตแล้ว',
-    });
-    setTimeout(() => {
-      navigation.goBack();
-    }, 1000);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await apiFetch('/api/auth/me');
+        if (!res.ok) {
+          console.log('[EDIT_PROFILE_LOAD_ERROR]', res.status);
+          return;
+        }
+        const data = await res.json();
+        setFormData({
+          name: data.name || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          birthDate: data.birthDate || '',
+          gender: data.gender || '',
+          address: data.address || '',
+        });
+      } catch (e) {
+        console.log('[EDIT_PROFILE_LOAD_EXCEPTION]', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      const res = await apiFetch('/api/users/me', {
+        method: 'PUT',
+        body: JSON.stringify(formData),
+      });
+      if (!res.ok) {
+        console.log('[EDIT_PROFILE_SAVE_ERROR]', res.status);
+        Toast.show({
+          type: 'error',
+          text1: 'บันทึกไม่สำเร็จ',
+          text2: 'กรุณาลองใหม่อีกครั้ง',
+        });
+        return;
+      }
+      Toast.show({
+        type: 'success',
+        text1: 'บันทึกสำเร็จ',
+        text2: 'ข้อมูลส่วนตัวของคุณได้รับการอัปเดตแล้ว',
+      });
+      setTimeout(() => {
+        navigation.goBack();
+      }, 1000);
+    } catch (e) {
+      console.log('[EDIT_PROFILE_SAVE_EXCEPTION]', e);
+      Toast.show({
+        type: 'error',
+        text1: 'เกิดข้อผิดพลาด',
+        text2: 'ไม่สามารถบันทึกข้อมูลได้',
+      });
+    }
   };
 
   return (
@@ -61,7 +111,12 @@ const EditProfileScreen: React.FC = () => {
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.card}>
             <View style={styles.avatarContainer}>
-              <Image source={{ uri: userData.avatar }} style={styles.avatar} />
+              <Image
+                source={{
+                  uri: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face',
+                }}
+                style={styles.avatar}
+              />
               <TouchableOpacity style={styles.cameraButton}>
                 <Text style={styles.cameraEmoji}>📷</Text>
               </TouchableOpacity>
@@ -124,7 +179,7 @@ const EditProfileScreen: React.FC = () => {
               >
                 ยกเลิก
               </Button>
-              <Button onPress={handleSave} style={styles.saveButton}>
+              <Button onPress={handleSave} style={styles.saveButton} disabled={loading}>
                 <View style={styles.saveButtonContent}>
                   <Ionicons name="save" size={16} color={colors.white} />
                   <Text style={styles.saveButtonText}>บันทึก</Text>

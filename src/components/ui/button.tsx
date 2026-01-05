@@ -108,24 +108,9 @@ const Button: React.FC<ButtonProps> = ({
     return baseTextStyle;
   };
 
-  const handlePress = () => {
-    console.log('[BUTTON_PRESS]', {
-      label: typeof children === 'string' ? children : 'non-text child',
-      variant,
-      size,
-      disabled,
-      loading,
-      time: new Date().toISOString(),
-    });
-
-    if (onPress) {
-      onPress();
-    }
-  };
-
   return (
     <TouchableOpacity
-      onPress={handlePress}
+      onPress={onPress}
       disabled={disabled || loading}
       style={[getButtonStyle(), style]}
       activeOpacity={0.7}

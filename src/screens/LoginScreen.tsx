@@ -7,6 +7,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,6 +17,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import Input from '../components/ui/input';
 import Button from '../components/ui/button';
 import colors from '../theme/colors';
+import { setAuthToken } from '../services/authStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -27,8 +29,112 @@ const LoginScreen: React.FC = () => {
     confirmPassword: '',
   });
 
-  const handleSubmit = () => {
-    navigation.navigate('MainTabs');
+  const [loading, setLoading] = useState(false);
+
+  const baseURL = 'http://192.168.1.13:4001';
+
+  const handleSubmit = async () => {
+    if (!formData.username || !formData.password) {
+      Alert.alert('กรุณากรอกข้อมูล', 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      Alert.alert('รหัสผ่านไม่ตรงกัน', 'โปรดยืนยันรหัสผ่านให้ตรงกัน');
+      return;
+    }
+
+    if (loading) return;
+
+    try {
+      setLoading(true);
+
+      console.log('[LOGIN_SUBMIT]', {
+        username: formData.username,
+        time: new Date().toISOString(),
+      });
+
+      // ลองล็อกอินก่อน
+      const loginResponse = await fetch(`${baseURL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: formData.username,
+          password: formData.password,
+        }),
+      });
+
+      if (loginResponse.ok) {
+        const loginData = await loginResponse.json();
+        setAuthToken(loginData.token);
+        console.log('[LOGIN_SUCCESS]', {
+          username: formData.username,
+          userId: loginData.user?.id,
+          time: new Date().toISOString(),
+        });
+        navigation.navigate('MainTabs');
+        return;
+      }
+
+      // ถ้าล็อกอินไม่ได้ (เช่น user ยังไม่มี) ให้ลองสมัครใหม่
+      if (loginResponse.status === 401) {
+        console.log('[LOGIN_FAILED_TRY_REGISTER]', {
+          username: formData.username,
+          status: loginResponse.status,
+          time: new Date().toISOString(),
+        });
+
+        const registerResponse = await fetch(`${baseURL}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: formData.username,
+            password: formData.password,
+            // ฟิลด์อื่น ๆ ไว้ค่อยเชื่อมกับ SignUp screens ภายหลัง
+          }),
+        });
+
+        if (!registerResponse.ok) {
+          const text = await registerResponse.text();
+          console.log('[REGISTER_ERROR]', {
+            username: formData.username,
+            status: registerResponse.status,
+            body: text,
+            time: new Date().toISOString(),
+          });
+          Alert.alert('ไม่สามารถสร้างบัญชีได้', 'โปรดลองใหม่อีกครั้ง');
+          return;
+        }
+        const registerData = await registerResponse.json();
+        setAuthToken(registerData.token);
+        console.log('[REGISTER_SUCCESS]', {
+          username: formData.username,
+          userId: registerData.user?.id,
+          time: new Date().toISOString(),
+        });
+
+        navigation.navigate('MainTabs');
+        return;
+      }
+
+      const errorText = await loginResponse.text();
+      console.log('[LOGIN_ERROR_UNEXPECTED]', {
+        username: formData.username,
+        status: loginResponse.status,
+        body: errorText,
+        time: new Date().toISOString(),
+      });
+      Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถเข้าสู่ระบบได้ โปรดลองอีกครั้ง');
+    } catch (error) {
+      console.log('[LOGIN_NETWORK_ERROR]', {
+        username: formData.username,
+        error,
+        time: new Date().toISOString(),
+      });
+      Alert.alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', 'กรุณาตรวจสอบว่า backend รันอยู่ที่พอร์ต 4001');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -78,7 +184,7 @@ const LoginScreen: React.FC = () => {
               <Text style={styles.forgotPasswordText}>ลืมรหัสผ่าน</Text>
             </TouchableOpacity>
 
-            <Button onPress={handleSubmit} style={styles.submitButton}>
+            <Button onPress={handleSubmit} style={styles.submitButton} loading={loading} disabled={loading}>
               เข้าสู่ระบบ
             </Button>
 

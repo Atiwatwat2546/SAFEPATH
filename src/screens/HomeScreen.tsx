@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,15 +9,46 @@ import WaveHeader from '../components/WaveHeader';
 import BookingCard from '../components/BookingCard';
 import UpcomingBooking from '../components/UpcomingBooking';
 import StatCards from '../components/StatCards';
-import { userData } from '../data/mockData';
-import { notifications } from '../data/notificationData';
 import colors from '../theme/colors';
+import { apiFetch } from '../services/api';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+interface HomeUser {
+  name?: string;
+  username: string;
+}
+
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const [user, setUser] = useState<HomeUser | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const res = await apiFetch('/api/auth/me');
+        if (!res.ok) {
+          console.log('[HOME_USER_LOAD_ERROR]', res.status);
+          setUser(null);
+          return;
+        }
+        const data = await res.json();
+        setUser({ name: data.name, username: data.username });
+      } catch (e) {
+        console.log('[HOME_USER_LOAD_EXCEPTION]', e);
+        setUser(null);
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
+    loadUser();
+  }, []);
+
+  const displayName = user?.name || user?.username || 'ผู้ใช้ใหม่';
+  const avatarUri = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face';
+  const unreadCount = 0; // ยังไม่มี backend สำหรับ notifications จริง ใช้ 0 เป็นค่าจริงชั่วคราว
 
   return (
     <View style={styles.container}>
@@ -26,11 +57,15 @@ const HomeScreen: React.FC = () => {
           <View style={styles.headerContent}>
             <View style={styles.userInfo}>
               <TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'Profile' } as any)}>
-                <Image source={{ uri: userData.avatar }} style={styles.avatar} />
+                <Image source={{ uri: avatarUri }} style={styles.avatar} />
               </TouchableOpacity>
               <View style={styles.greeting}>
                 <Text style={styles.greetingText}>สวัสดี</Text>
-                <Text style={styles.userName}>{userData.firstName}!</Text>
+                {loadingUser ? (
+                  <ActivityIndicator color={colors.white} />
+                ) : (
+                  <Text style={styles.userName}>{displayName}!</Text>
+                )}
                 <Text style={styles.welcomeBack}>ยินดีต้อนรับกลับมา</Text>
               </View>
             </View>

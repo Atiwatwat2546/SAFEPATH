@@ -1,10 +1,59 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { upcomingBooking } from '../data/mockData';
 import colors from '../theme/colors';
+import { apiFetch } from '../services/api';
+
+interface Upcoming {
+  date: string;
+  time: string;
+  from: string;
+  to: string;
+}
 
 const UpcomingBooking: React.FC = () => {
+  const [upcoming, setUpcoming] = useState<Upcoming | null>(null);
+
+  useEffect(() => {
+    const loadUpcoming = async () => {
+      try {
+        const res = await apiFetch('/api/bookings');
+        if (!res.ok) {
+          console.log('[UPCOMING_LOAD_ERROR]', res.status);
+          setUpcoming(null);
+          return;
+        }
+        const data = await res.json();
+        const upcomingList = (data || []).filter((b: any) => b.status === 'upcoming');
+        if (upcomingList.length === 0) {
+          setUpcoming(null);
+          return;
+        }
+        const b = upcomingList[0];
+        setUpcoming({
+          date: b.date,
+          time: b.time,
+          from: b.fromAddress,
+          to: b.toAddress,
+        });
+      } catch (e) {
+        console.log('[UPCOMING_LOAD_EXCEPTION]', e);
+        setUpcoming(null);
+      }
+    };
+
+    loadUpcoming();
+  }, []);
+
+  if (!upcoming) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.sectionTitle}>การจองที่กำลังจะมาถึง</Text>
+        <Text style={styles.emptyText}>ยังไม่มีการจองที่กำลังจะมาถึง</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>การจองที่กำลังจะมาถึง</Text>
@@ -15,13 +64,13 @@ const UpcomingBooking: React.FC = () => {
           </View>
           <View style={styles.content}>
             <Text style={styles.dateTime}>
-              {upcomingBooking.date} | {upcomingBooking.time}
+              {upcoming.date} | {upcoming.time}
             </Text>
             <View style={styles.locationRow}>
               <Ionicons name="location" size={16} color={colors.mutedForeground} />
-              <Text style={styles.locationText}>จาก: {upcomingBooking.from}</Text>
+              <Text style={styles.locationText}>จาก: {upcoming.from}</Text>
             </View>
-            <Text style={styles.locationSubText}>ถึง: {upcomingBooking.to}</Text>
+            <Text style={styles.locationSubText}>ถึง: {upcoming.to}</Text>
           </View>
         </View>
         <View style={styles.footer}>
@@ -37,6 +86,10 @@ const UpcomingBooking: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     marginTop: 24,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: colors.mutedForeground,
   },
   sectionTitle: {
     fontSize: 18,
