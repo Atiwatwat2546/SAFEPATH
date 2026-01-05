@@ -7,6 +7,8 @@ interface BookingData {
   time?: string;
   passengerType?: string;
   equipment?: string[];
+  distance?: number;
+  fare?: number;
 }
 
 let pendingBooking: BookingData = {};

@@ -20,6 +20,10 @@ const PaymentScreen: React.FC = () => {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('cash');
   const [loading, setLoading] = useState(false);
 
+  const bookingData = getPendingBooking();
+  const fare = bookingData.fare || 0;
+  const distance = bookingData.distance || 0;
+
   const methods: { id: PaymentMethod; label: string; description: string; icon: string }[] = [
     { id: 'cash', label: 'ชำระเงินสดกับคนขับ', description: 'จ่ายเงินสดเมื่อให้บริการเสร็จสิ้น', icon: 'cash-outline' },
     { id: 'card', label: 'บัตรเครดิต/เดบิต', description: 'ผูกบัตรเพื่อชำระอัตโนมัติ', icon: 'card-outline' },
@@ -44,7 +48,7 @@ const PaymentScreen: React.FC = () => {
       }
 
       const now = new Date().toISOString();
-      
+
       // บันทึกการจองลง Firestore
       const bookingRef = await db.collection('bookings').add({
         userId: currentUser.uid,
@@ -54,6 +58,8 @@ const PaymentScreen: React.FC = () => {
         time: bookingData.time || '',
         passengerType: bookingData.passengerType || '',
         equipment: bookingData.equipment || [],
+        distance: bookingData.distance || 0,
+        fare: bookingData.fare || 0,
         paymentMethod: selectedMethod,
         status: 'pending',
         createdAt: now,
@@ -65,7 +71,7 @@ const PaymentScreen: React.FC = () => {
         userId: currentUser.uid,
         bookingId: bookingRef.id,
         method: selectedMethod,
-        amount: 0,
+        amount: bookingData.fare || 0,
         status: 'pending',
         createdAt: now,
       });
@@ -138,13 +144,19 @@ const PaymentScreen: React.FC = () => {
 
           <View style={styles.summaryContainer}>
             <Text style={styles.summaryTitle}>สรุปการชำระเงิน</Text>
+            {distance > 0 && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>ระยะทาง</Text>
+                <Text style={styles.summaryValue}>{distance.toFixed(1)} กม.</Text>
+              </View>
+            )}
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>ค่าบริการโดยประมาณ</Text>
-              <Text style={styles.summaryValue}>฿0.00</Text>
+              <Text style={styles.summaryLabel}>ค่าบริการ (50 บาท/กม.)</Text>
+              <Text style={styles.summaryValue}>฿{fare.toLocaleString()}</Text>
             </View>
             <View style={[styles.summaryRow, styles.summaryTotalRow]}>
               <Text style={styles.summaryTotalLabel}>ยอดรวมที่ต้องชำระ</Text>
-              <Text style={styles.summaryTotalValue}>฿0.00</Text>
+              <Text style={styles.summaryTotalValue}>฿{fare.toLocaleString()}</Text>
             </View>
           </View>
 

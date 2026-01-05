@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions, ActivityIndicator, TextInput, FlatList, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import Input from '../components/ui/input';
 import Button from '../components/ui/button';
 import colors from '../theme/colors';
 import { setPendingBooking, clearPendingBooking } from '../services/bookingStore';
+import { calculateDistanceAndFare } from '../utils/distanceCalculator';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -19,6 +20,25 @@ interface Location {
   lng: number;
   address?: string;
 }
+
+// ข้อมูลโรงพยาบาลในประเทศไทย
+const HOSPITALS = [
+  { id: '1', name: 'โรงพยาบาลศิริราช', address: 'แขวงศิริราช เขตบางกอกน้อย กรุงเทพฯ', lat: 13.7584, lng: 100.4865 },
+  { id: '2', name: 'โรงพยาบาลจุฬาลงกรณ์', address: 'แขวงปทุมวัน เขตปทุมวัน กรุงเทพฯ', lat: 13.7326, lng: 100.5327 },
+  { id: '3', name: 'โรงพยาบาลรามาธิบดี', address: 'แขวงทุ่งพญาไท เขตราชเทวี กรุงเทพฯ', lat: 13.7596, lng: 100.5299 },
+  { id: '4', name: 'โรงพยาบาลศรีนครินทร์', address: 'ตำบลในเมือง อำเภอเมือง ขอนแก่น', lat: 16.4322, lng: 102.8236 },
+  { id: '5', name: 'โรงพยาบาลสงขลานครินทร์', address: 'ตำบลหาดใหญ่ อำเภอหาดใหญ่ สงขลา', lat: 7.0089, lng: 100.4969 },
+  { id: '6', name: 'โรงพยาบาลมหาราชนครเชียงใหม่', address: 'ตำบลศรีภูมิ อำเภอเมือง เชียงใหม่', lat: 18.7956, lng: 98.9664 },
+  { id: '7', name: 'โรงพยาบาลบำรุงราษฎร์', address: 'แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ', lat: 13.7378, lng: 100.5596 },
+  { id: '8', name: 'โรงพยาบาลสมิติเวช', address: 'แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ', lat: 13.7242, lng: 100.6436 },
+  { id: '9', name: 'โรงพยาบาลกรุงเทพ', address: 'แขวงบางกะปิ เขตห้วยขวาง กรุงเทพฯ', lat: 13.7563, lng: 100.5746 },
+  { id: '10', name: 'โรงพยาบาลเซนต์หลุยส์', address: 'แขวงยานนาวา เขตสาทร กรุงเทพฯ', lat: 13.7194, lng: 100.5271 },
+  { id: '11', name: 'โรงพยาบาลพญาไท 2', address: 'แขวงพญาไท เขตพญาไท กรุงเทพฯ', lat: 13.7781, lng: 100.5447 },
+  { id: '12', name: 'โรงพยาบาลวิชัยเวช', address: 'แขวงสามเสนใน เขตพญาไท กรุงเทพฯ', lat: 13.7826, lng: 100.5454 },
+  { id: '13', name: 'โรงพยาบาลเปาโล', address: 'แขวงจอมพล เขตจตุจักร กรุงเทพฯ', lat: 13.8058, lng: 100.5615 },
+  { id: '14', name: 'โรงพยาบาลราชวิถี', address: 'แขวงทุ่งพญาไท เขตราชเทวี กรุงเทพฯ', lat: 13.7584, lng: 100.5324 },
+  { id: '15', name: 'โรงพยาบาลพระมงกุฎเกล้า', address: 'แขวงทุ่งพญาไท เขตราชเทวี กรุงเทพฯ', lat: 13.7641, lng: 100.5367 },
+];
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +51,12 @@ const Booking1Screen: React.FC = () => {
   const [toLocation, setToLocation] = useState<Location | null>(null);
   const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
+  const [fromSuggestions, setFromSuggestions] = useState<typeof HOSPITALS>([]);
+  const [toSuggestions, setToSuggestions] = useState<typeof HOSPITALS>([]);
+  const [showFromSuggestions, setShowFromSuggestions] = useState(false);
+  const [showToSuggestions, setShowToSuggestions] = useState(false);
+  const [distance, setDistance] = useState<number>(0);
+  const [fare, setFare] = useState<number>(0);
   const [region, setRegion] = useState<Region>({
     latitude: 13.7563,
     longitude: 100.5018,
@@ -104,13 +130,91 @@ const Booking1Screen: React.FC = () => {
     }
     setFromLocation(currentLocation);
     setFromAddress(currentLocation.address || 'ตำแหน่งปัจจุบัน');
+    setShowFromSuggestions(false);
     Alert.alert('สำเร็จ', 'ใช้ตำแหน่งปัจจุบันเป็นต้นทางแล้ว');
   };
 
+  // ค้นหาโรงพยาบาลจากฐานข้อมูลท้องถิ่น
+  const searchHospitals = (query: string, isOrigin: boolean) => {
+    if (query.length < 2) {
+      if (isOrigin) {
+        setFromSuggestions([]);
+        setShowFromSuggestions(false);
+      } else {
+        setToSuggestions([]);
+        setShowToSuggestions(false);
+      }
+      return;
+    }
+
+    const filtered = HOSPITALS.filter(hospital =>
+      hospital.name.toLowerCase().includes(query.toLowerCase()) ||
+      hospital.address.toLowerCase().includes(query.toLowerCase())
+    );
+
+    if (isOrigin) {
+      setFromSuggestions(filtered);
+      setShowFromSuggestions(filtered.length > 0);
+    } else {
+      setToSuggestions(filtered);
+      setShowToSuggestions(filtered.length > 0);
+    }
+  };
+
+  // เลือกโรงพยาบาล
+  const selectHospital = (hospital: typeof HOSPITALS[0], isOrigin: boolean) => {
+    const location: Location = {
+      lat: hospital.lat,
+      lng: hospital.lng,
+      address: `${hospital.name}, ${hospital.address}`,
+    };
+
+    if (isOrigin) {
+      setFromLocation(location);
+      setFromAddress(`${hospital.name}, ${hospital.address}`);
+      setShowFromSuggestions(false);
+    } else {
+      setToLocation(location);
+      setToAddress(`${hospital.name}, ${hospital.address}`);
+      setShowToSuggestions(false);
+    }
+  };
+
+  const handleFromAddressChange = (text: string) => {
+    setFromAddress(text);
+    searchHospitals(text, true);
+  };
+
+  const handleToAddressChange = (text: string) => {
+    setToAddress(text);
+    searchHospitals(text, false);
+  };
+
+
+  // คำนวณระยะทางและค่าโดยสารเมื่อมีทั้งต้นทางและปลายทาง
+  useEffect(() => {
+    if (fromLocation && toLocation) {
+      const result = calculateDistanceAndFare(
+        fromLocation.lat,
+        fromLocation.lng,
+        toLocation.lat,
+        toLocation.lng
+      );
+      setDistance(result.distance);
+      setFare(result.fare);
+    } else {
+      setDistance(0);
+      setFare(0);
+    }
+  }, [fromLocation, toLocation]);
 
   const handleNext = () => {
     if (!fromAddress || !toAddress) {
       Alert.alert('แจ้งเตือน', 'กรุณาระบุสถานที่ต้นทางและปลายทาง');
+      return;
+    }
+    if (!fromLocation || !toLocation) {
+      Alert.alert('แจ้งเตือน', 'กรุณาเลือกสถานที่จาก dropdown');
       return;
     }
     setPendingBooking({
@@ -118,6 +222,8 @@ const Booking1Screen: React.FC = () => {
       toAddress,
       fromLocation,
       toLocation,
+      distance,
+      fare,
     });
     navigation.navigate('Booking2' as any);
   };
@@ -218,13 +324,38 @@ const Booking1Screen: React.FC = () => {
                     )}
                   </TouchableOpacity>
                 </View>
-                <Input
-                  placeholder="พิมพ์ชื่อสถานที่ต้นทาง"
-                  value={fromAddress}
-                  onChangeText={setFromAddress}
-                  containerStyle={styles.input}
-                />
-                <Text style={styles.helperText}>💡 กดปุ่ม "ใช้ตำแหน่งปัจจุบัน" หรือพิมพ์ชื่อสถานที่</Text>
+                <View>
+                  <TextInput
+                    placeholder="พิมพ์ชื่อโรงพยาบาล"
+                    value={fromAddress}
+                    onChangeText={handleFromAddressChange}
+                    style={styles.textInput}
+                    placeholderTextColor={colors.mutedForeground}
+                  />
+                  {showFromSuggestions && (
+                    <View style={styles.suggestionsContainer}>
+                      <FlatList
+                        data={fromSuggestions}
+                        keyExtractor={(item) => item.id}
+                        renderItem={({ item }) => (
+                          <TouchableOpacity
+                            style={styles.suggestionItem}
+                            onPress={() => selectHospital(item, true)}
+                          >
+                            <Ionicons name="medical" size={20} color={colors.primary} />
+                            <View style={styles.suggestionTextContainer}>
+                              <Text style={styles.suggestionMainText}>{item.name}</Text>
+                              <Text style={styles.suggestionSecondaryText}>{item.address}</Text>
+                            </View>
+                          </TouchableOpacity>
+                        )}
+                        style={styles.suggestionsList}
+                        keyboardShouldPersistTaps="handled"
+                      />
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.helperText}>💡 กดปุ่ม "ใช้ตำแหน่งปัจจุบัน" หรือพิมพ์ชื่อโรงพยาบาล</Text>
               </View>
             </View>
 
@@ -232,16 +363,59 @@ const Booking1Screen: React.FC = () => {
               <View style={[styles.dot, { backgroundColor: colors.destructive }]} />
               <View style={styles.inputWrapper}>
                 <Text style={styles.inputLabel}>ปลายทาง (ส่งผู้โดยสาร)</Text>
-                <Input
-                  placeholder="พิมพ์ชื่อสถานที่ปลายทาง"
-                  value={toAddress}
-                  onChangeText={setToAddress}
-                  containerStyle={styles.input}
-                />
-                <Text style={styles.helperText}>💡 พิมพ์ชื่อสถานที่ เช่น "สนามบินสุวรรณภูมิ"</Text>
+                <View>
+                  <TextInput
+                    placeholder="พิมพ์ชื่อโรงพยาบาล"
+                    value={toAddress}
+                    onChangeText={handleToAddressChange}
+                    style={styles.textInput}
+                    placeholderTextColor={colors.mutedForeground}
+                  />
+                  {showToSuggestions && (
+                    <View style={styles.suggestionsContainer}>
+                      <FlatList
+                        data={toSuggestions}
+                        keyExtractor={(item) => item.id}
+                        renderItem={({ item }) => (
+                          <TouchableOpacity
+                            style={styles.suggestionItem}
+                            onPress={() => selectHospital(item, false)}
+                          >
+                            <Ionicons name="medical" size={20} color={colors.primary} />
+                            <View style={styles.suggestionTextContainer}>
+                              <Text style={styles.suggestionMainText}>{item.name}</Text>
+                              <Text style={styles.suggestionSecondaryText}>{item.address}</Text>
+                            </View>
+                          </TouchableOpacity>
+                        )}
+                        style={styles.suggestionsList}
+                        keyboardShouldPersistTaps="handled"
+                      />
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.helperText}>💡 พิมพ์ชื่อโรงพยาบาล</Text>
               </View>
             </View>
           </View>
+
+          {distance > 0 && fare > 0 && (
+            <View style={styles.fareContainer}>
+              <View style={styles.fareRow}>
+                <Ionicons name="navigate" size={20} color={colors.primary} />
+                <Text style={styles.fareLabel}>ระยะทาง:</Text>
+                <Text style={styles.fareValue}>{distance.toFixed(1)} กม.</Text>
+              </View>
+              <View style={styles.fareRow}>
+                <Ionicons name="cash" size={20} color={colors.primary} />
+                <Text style={styles.fareLabel}>ค่าโดยสาร:</Text>
+                <Text style={styles.fareValue}>{fare.toLocaleString()} บาท</Text>
+              </View>
+              <View style={styles.fareNote}>
+                <Text style={styles.fareNoteText}>💡 คิดค่าโดยสาร 50 บาท/กิโลเมตร</Text>
+              </View>
+            </View>
+          )}
 
           <Button onPress={handleNext} style={styles.nextButton}>
             ต่อไป
@@ -385,6 +559,96 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 0,
+  },
+  textInput: {
+    fontFamily: 'Prompt_400Regular',
+    height: 48,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: colors.foreground,
+    backgroundColor: colors.card,
+  },
+  suggestionsContainer: {
+    position: 'absolute',
+    top: 48,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    maxHeight: 200,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 1000,
+  },
+  suggestionsList: {
+    maxHeight: 200,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  suggestionTextContainer: {
+    flex: 1,
+  },
+  suggestionMainText: {
+    fontFamily: 'Prompt_500Medium',
+    fontSize: 14,
+    color: colors.foreground,
+    marginBottom: 2,
+  },
+  suggestionSecondaryText: {
+    fontFamily: 'Prompt_400Regular',
+    fontSize: 12,
+    color: colors.mutedForeground,
+  },
+  fareContainer: {
+    marginTop: 24,
+    padding: 16,
+    backgroundColor: colors.primary + '10',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+  },
+  fareRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  fareLabel: {
+    fontFamily: 'Prompt_500Medium',
+    fontSize: 14,
+    color: colors.foreground,
+    flex: 1,
+  },
+  fareValue: {
+    fontFamily: 'Prompt_700Bold',
+    fontSize: 16,
+    color: colors.primary,
+  },
+  fareNote: {
+    marginTop: 4,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  fareNoteText: {
+    fontFamily: 'Prompt_400Regular',
+    fontSize: 12,
+    color: colors.mutedForeground,
+    textAlign: 'center',
   },
   nextButton: {
     marginTop: 24,
