@@ -15,6 +15,18 @@ const Input: React.FC<InputProps> = ({
   style,
   ...props
 }) => {
+  const handleChangeText = (text: string) => {
+    console.log('[INPUT_CHANGE]', {
+      label: label || 'unlabeled',
+      value: text,
+      time: new Date().toISOString(),
+    });
+
+    if (props.onChangeText) {
+      props.onChangeText(text);
+    }
+  };
+
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={styles.label}>{label}</Text>}
@@ -25,6 +37,7 @@ const Input: React.FC<InputProps> = ({
           style,
         ]}
         placeholderTextColor={colors.mutedForeground}
+        onChangeText={handleChangeText}
         {...props}
       />
       {error && <Text style={styles.errorText}>{error}</Text>}
