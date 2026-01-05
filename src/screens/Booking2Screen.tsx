@@ -1,20 +1,26 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { RootStackParamList } from '../navigation/AppNavigator';
+
 import Button from '../components/ui/button';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import colors from '../theme/colors';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const Booking2Screen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
+
+  const [tempDate, setTempDate] = useState(new Date());
+  const [tempTime, setTempTime] = useState(new Date());
+
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -22,19 +28,55 @@ const Booking2Screen: React.FC = () => {
     navigation.navigate('Booking3');
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('th-TH', {
+  const formatDate = (date: Date) =>
+    date.toLocaleDateString('th-TH', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
-  };
 
-  const formatTime = (time: Date) => {
-    return time.toLocaleTimeString('th-TH', {
+  const formatTime = (time: Date) =>
+    time.toLocaleTimeString('th-TH', {
       hour: '2-digit',
       minute: '2-digit',
     });
+
+  /** =========================
+   * Date Picker
+   * ========================= */
+  const onChangeDate = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+      if (event.type === 'set' && selectedDate) {
+        setDate(selectedDate);
+      }
+    } else if (selectedDate) {
+      setTempDate(selectedDate);
+    }
+  };
+
+  const confirmDateIOS = () => {
+    setDate(tempDate);
+    setShowDatePicker(false);
+  };
+
+  /** =========================
+   * Time Picker
+   * ========================= */
+  const onChangeTime = (event: DateTimePickerEvent, selectedTime?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+      if (event.type === 'set' && selectedTime) {
+        setTime(selectedTime);
+      }
+    } else if (selectedTime) {
+      setTempTime(selectedTime);
+    }
+  };
+
+  const confirmTimeIOS = () => {
+    setTime(tempTime);
+    setShowTimePicker(false);
   };
 
   const steps = [
@@ -46,6 +88,7 @@ const Booking2Screen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.white} />
@@ -53,12 +96,10 @@ const Booking2Screen: React.FC = () => {
         <Text style={styles.headerTitle}>จองบริการ</Text>
       </View>
 
+      {/* Steps */}
       <View style={styles.stepsContainer}>
         {steps.map((step) => (
-          <View
-            key={step.number}
-            style={[styles.step, step.active && styles.stepActive]}
-          >
+          <View key={step.number} style={[styles.step, step.active && styles.stepActive]}>
             <Text style={[styles.stepText, step.active && styles.stepTextActive]}>
               {step.number}
             </Text>
@@ -66,6 +107,7 @@ const Booking2Screen: React.FC = () => {
         ))}
       </View>
 
+      {/* Content */}
       <View style={styles.content}>
         <View style={styles.card}>
           <View style={styles.iconContainer}>
@@ -76,22 +118,30 @@ const Booking2Screen: React.FC = () => {
           <Text style={styles.subtitle}>กรุณาเลือกวันและเวลาที่ต้องการ</Text>
 
           <View style={styles.form}>
+            {/* Date */}
             <View style={styles.inputContainer}>
               <Text style={styles.label}>วันที่</Text>
               <TouchableOpacity
                 style={styles.pickerButton}
-                onPress={() => setShowDatePicker(true)}
+                onPress={() => {
+                  setTempDate(date);
+                  setShowDatePicker(true);
+                }}
               >
                 <Ionicons name="calendar-outline" size={20} color={colors.mutedForeground} />
                 <Text style={styles.pickerText}>{formatDate(date)}</Text>
               </TouchableOpacity>
             </View>
 
+            {/* Time */}
             <View style={styles.inputContainer}>
               <Text style={styles.label}>เวลา</Text>
               <TouchableOpacity
                 style={styles.pickerButton}
-                onPress={() => setShowTimePicker(true)}
+                onPress={() => {
+                  setTempTime(time);
+                  setShowTimePicker(true);
+                }}
               >
                 <Ionicons name="time-outline" size={20} color={colors.mutedForeground} />
                 <Text style={styles.pickerText}>{formatTime(time)}</Text>
@@ -105,37 +155,48 @@ const Booking2Screen: React.FC = () => {
         </View>
       </View>
 
+      {/* Date Picker */}
       {showDatePicker && (
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(event, selectedDate) => {
-            setShowDatePicker(Platform.OS === 'ios');
-            if (selectedDate) {
-              setDate(selectedDate);
-            }
-          }}
-        />
+        <View style={styles.pickerWrapper}>
+          <DateTimePicker
+            value={Platform.OS === 'ios' ? tempDate : date}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={onChangeDate}
+          />
+          {Platform.OS === 'ios' && (
+            <Button onPress={confirmDateIOS} style={styles.doneButton}>
+              ตกลง
+            </Button>
+          )}
+        </View>
       )}
 
+      {/* Time Picker */}
       {showTimePicker && (
-        <DateTimePicker
-          value={time}
-          mode="time"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(event, selectedTime) => {
-            setShowTimePicker(Platform.OS === 'ios');
-            if (selectedTime) {
-              setTime(selectedTime);
-            }
-          }}
-        />
+        <View style={styles.pickerWrapper}>
+          <DateTimePicker
+            value={Platform.OS === 'ios' ? tempTime : time}
+            mode="time"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={onChangeTime}
+          />
+          {Platform.OS === 'ios' && (
+            <Button onPress={confirmTimeIOS} style={styles.doneButton}>
+              ตกลง
+            </Button>
+          )}
+        </View>
       )}
     </SafeAreaView>
   );
 };
 
+export default Booking2Screen;
+
+/* =========================
+          Styles
+========================= */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -189,10 +250,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: 16,
     padding: 24,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
     elevation: 4,
   },
   iconContainer: {
@@ -210,7 +267,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.foreground,
     textAlign: 'center',
-    marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
@@ -238,7 +294,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 16,
-    backgroundColor: colors.card,
   },
   pickerText: {
     fontSize: 16,
@@ -247,6 +302,12 @@ const styles = StyleSheet.create({
   nextButton: {
     marginTop: 24,
   },
+  pickerWrapper: {
+    backgroundColor: colors.card,
+    paddingBottom: 16,
+  },
+  doneButton: {
+    marginHorizontal: 24,
+    marginTop: 8,
+  },
 });
-
-export default Booking2Screen;
