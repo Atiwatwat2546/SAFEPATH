@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import WaveHeader from '../components/WaveHeader';
 import ProfileInfo from '../components/ProfileInfo';
-import colors from '../theme/colors';
+import WaveHeader from '../components/WaveHeader';
 import { auth, db } from '../firebase';
+import colors from '../theme/colors';
 
 interface ProfileData {
   name?: string;
@@ -22,18 +22,16 @@ const ProfileScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-          console.log('[PROFILE_USER_NOT_LOGGED_IN]');
-          setProfile(null);
-          setLoading(false);
-          return;
-        }
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.log('[PROFILE_USER_NOT_LOGGED_IN]');
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
 
-        // ดึงข้อมูลผู้ใช้จาก Firestore
-        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+    const unsubscribe = db.collection('users').doc(currentUser.uid)
+      .onSnapshot(userDoc => {
         if (userDoc.exists) {
           const userData = userDoc.data();
           setProfile({
@@ -50,15 +48,14 @@ const ProfileScreen: React.FC = () => {
           console.log('[PROFILE_DOC_NOT_FOUND]');
           setProfile(null);
         }
-      } catch (e) {
+        setLoading(false);
+      }, e => {
         console.log('[PROFILE_LOAD_EXCEPTION]', e);
         setProfile(null);
-      } finally {
         setLoading(false);
-      }
-    };
+      });
 
-    loadProfile();
+    return () => unsubscribe();
   }, []);
 
   const displayName = profile?.name || profile?.username || profile?.email || 'ผู้ใช้ใหม่';

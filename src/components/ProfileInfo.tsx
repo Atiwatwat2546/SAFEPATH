@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import colors from '../theme/colors';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { auth, db } from '../firebase';
+import { RootStackParamList } from '../navigation/AppNavigator';
+import colors from '../theme/colors';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -20,16 +20,15 @@ const ProfileInfo: React.FC = () => {
   const [infoItems, setInfoItems] = useState<InfoItem[] | null>(null);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-          console.log('[PROFILE_INFO_USER_NOT_LOGGED_IN]');
-          setInfoItems([]);
-          return;
-        }
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.log('[PROFILE_INFO_USER_NOT_LOGGED_IN]');
+      setInfoItems([]);
+      return;
+    }
 
-        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+    const unsubscribe = db.collection('users').doc(currentUser.uid)
+      .onSnapshot(userDoc => {
         if (!userDoc.exists) {
           console.log('[PROFILE_INFO_DOC_NOT_FOUND]');
           setInfoItems([]);
@@ -46,13 +45,12 @@ const ProfileInfo: React.FC = () => {
           { icon: 'location', label: 'ที่อยู่', value: data?.address || '-' },
         ];
         setInfoItems(items);
-      } catch (e) {
+      }, (e) => {
         console.log('[PROFILE_INFO_LOAD_EXCEPTION]', e);
         setInfoItems([]);
-      }
-    };
+      });
 
-    load();
+    return () => unsubscribe();
   }, []);
 
   return (

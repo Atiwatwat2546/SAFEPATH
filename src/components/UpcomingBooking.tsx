@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import colors from '../theme/colors';
+import React, { useEffect, useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { auth, db } from '../firebase';
+import colors from '../theme/colors';
 
 interface Upcoming {
   id: string;
@@ -17,44 +17,41 @@ const UpcomingBooking: React.FC = () => {
   const [upcoming, setUpcoming] = useState<Upcoming | null>(null);
 
   useEffect(() => {
-    const loadUpcoming = async () => {
-      try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-          console.log('[UPCOMING_USER_NOT_LOGGED_IN]');
-          setUpcoming(null);
-          return;
-        }
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.log('[UPCOMING_USER_NOT_LOGGED_IN]');
+      setUpcoming(null);
+      return;
+    }
 
-        const bookingsSnapshot = await db.collection('bookings')
-          .where('userId', '==', currentUser.uid)
-          .where('status', '==', 'pending')
-          .orderBy('createdAt', 'desc')
-          .limit(1)
-          .get();
-        
-        if (bookingsSnapshot.empty) {
-          setUpcoming(null);
-          return;
-        }
+    const query = db.collection('bookings')
+      .where('userId', '==', currentUser.uid)
+      .where('status', '==', 'pending')
+      .orderBy('createdAt', 'desc')
+      .limit(1);
 
-        const doc = bookingsSnapshot.docs[0];
-        const b = doc.data();
-        setUpcoming({
-          id: doc.id,
-          date: b.date,
-          time: b.time,
-          from: b.fromAddress,
-          to: b.toAddress,
-          status: b.status,
-        });
-      } catch (e) {
-        console.log('[UPCOMING_LOAD_EXCEPTION]', e);
+    const unsubscribe = query.onSnapshot(snapshot => {
+      if (snapshot.empty) {
         setUpcoming(null);
+        return;
       }
-    };
 
-    loadUpcoming();
+      const doc = snapshot.docs[0];
+      const b = doc.data();
+      setUpcoming({
+        id: doc.id,
+        date: b.date,
+        time: b.time,
+        from: b.fromAddress,
+        to: b.toAddress,
+        status: b.status,
+      });
+    }, (e) => {
+      console.log('[UPCOMING_LOAD_EXCEPTION]', e);
+      setUpcoming(null);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   if (!upcoming) {
