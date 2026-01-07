@@ -1,16 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions, ActivityIndicator, TextInput, FlatList, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Dimensions, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker, Region } from 'react-native-maps';
+
+let MapView: any = null;
+let Marker: any = null;
+
+// Basic Region type used when react-native-maps types are not available
+type Region = {
+  latitude: number;
+  longitude: number;
+  latitudeDelta: number;
+  longitudeDelta: number;
+};
+
+try {
+  const maps = require('react-native-maps');
+  MapView = maps.default ?? maps;
+  Marker = maps.Marker;
+} catch (e) {
+  console.log('[MAPS] Native module not available', e);
+}
+
 import * as Location from 'expo-location';
-import { RootStackParamList } from '../navigation/AppNavigator';
-import Input from '../components/ui/input';
 import Button from '../components/ui/button';
+import { RootStackParamList } from '../navigation/AppNavigator';
+import { clearPendingBooking, setPendingBooking } from '../services/bookingStore';
 import colors from '../theme/colors';
-import { setPendingBooking, clearPendingBooking } from '../services/bookingStore';
 import { calculateDistanceAndFare } from '../utils/distanceCalculator';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -86,7 +104,7 @@ const { width } = Dimensions.get('window');
 
 const Booking1Screen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<any>(null);
   const [fromAddress, setFromAddress] = useState('');
   const [toAddress, setToAddress] = useState('');
   const [fromLocation, setFromLocation] = useState<Location | null>(null);
@@ -304,44 +322,50 @@ const Booking1Screen: React.FC = () => {
 
       <View style={styles.content}>
         <View style={styles.mapContainer}>
-          <MapView
-            ref={mapRef}
-            style={styles.map}
-            region={region}
-            onRegionChangeComplete={setRegion}
-          >
-            {currentLocation && (
-              <Marker
-                coordinate={{
-                  latitude: currentLocation.lat,
-                  longitude: currentLocation.lng,
-                }}
-                title="ตำแหน่งปัจจุบัน"
-                description={currentLocation.address}
-                pinColor="blue"
-              />
-            )}
-            {fromLocation && (
-              <Marker
-                coordinate={{
-                  latitude: fromLocation.lat,
-                  longitude: fromLocation.lng,
-                }}
-                title="ต้นทาง"
-                pinColor={colors.primary}
-              />
-            )}
-            {toLocation && (
-              <Marker
-                coordinate={{
-                  latitude: toLocation.lat,
-                  longitude: toLocation.lng,
-                }}
-                title="ปลายทาง"
-                pinColor={colors.destructive}
-              />
-            )}
-          </MapView>
+          {MapView ? (
+            <MapView
+              ref={mapRef}
+              style={styles.map}
+              region={region}
+              onRegionChangeComplete={setRegion}
+            >
+              {currentLocation && Marker && (
+                <Marker
+                  coordinate={{
+                    latitude: currentLocation.lat,
+                    longitude: currentLocation.lng,
+                  }}
+                  title="ตำแหน่งปัจจุบัน"
+                  description={currentLocation.address}
+                  pinColor="blue"
+                />
+              )}
+              {fromLocation && Marker && (
+                <Marker
+                  coordinate={{
+                    latitude: fromLocation.lat,
+                    longitude: fromLocation.lng,
+                  }}
+                  title="ต้นทาง"
+                  pinColor={colors.primary}
+                />
+              )}
+              {toLocation && Marker && (
+                <Marker
+                  coordinate={{
+                    latitude: toLocation.lat,
+                    longitude: toLocation.lng,
+                  }}
+                  title="ปลายทาง"
+                  pinColor={colors.destructive}
+                />
+              )}
+            </MapView>
+          ) : (
+            <View style={styles.mapPlaceholder}>
+              <Text style={styles.mapPlaceholderText}>แผนที่ถูกปิดใช้งานชั่วคราว (native module ไม่พร้อมใช้งาน)</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.formCard}>
@@ -689,6 +713,19 @@ const styles = StyleSheet.create({
   fareNoteText: {
     fontFamily: 'Prompt_400Regular',
     fontSize: 12,
+    color: colors.mutedForeground,
+    textAlign: 'center',
+  },
+  mapPlaceholder: {
+    height: 200,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  mapPlaceholderText: {
+    fontFamily: 'Prompt_400Regular',
+    fontSize: 14,
     color: colors.mutedForeground,
     textAlign: 'center',
   },

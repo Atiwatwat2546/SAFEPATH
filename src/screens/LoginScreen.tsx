@@ -1,45 +1,48 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { RootStackParamList } from '../navigation/AppNavigator';
-import Input from '../components/ui/input';
-import Button from '../components/ui/button';
-import colors from '../theme/colors';
-import { setAuthToken } from '../services/authStore';
-import { auth } from '../firebase';
+import React, { useEffect, useState } from 'react';
 import {
-  isBiometricSupported,
-  isBiometricEnrolled,
-  isBiometricEnabled,
-  authenticateWithBiometric,
-  enableBiometric,
-  getBiometricType,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Button from '../components/ui/button';
+import Input from '../components/ui/input';
+import { auth } from '../firebase';
+import { RootStackParamList } from '../navigation/AppNavigator';
+import { setAuthToken } from '../services/authStore';
+import {
+    authenticateWithBiometric,
+    enableBiometric,
+    getBiometricType,
+    isBiometricEnabled,
+    isBiometricEnrolled,
+    isBiometricSupported,
 } from '../services/biometricAuth';
+import colors from '../theme/colors';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 let GoogleSignin: any = null;
 let statusCodes: any = null;
 
-try {
-  const googleSignInModule = require('@react-native-google-signin/google-signin');
-  GoogleSignin = googleSignInModule.GoogleSignin;
-  statusCodes = googleSignInModule.statusCodes;
-} catch (e) {
-  console.log('[GOOGLE_SIGNIN] Native module not available in Expo Go');
-}
+// Temporarily disabled to avoid Google Sign-In runtime errors.
+// To re-enable, restore the require block below and the related code.
+//// try {
+////   const googleSignInModule = require('@react-native-google-signin/google-signin');
+////   GoogleSignin = googleSignInModule.GoogleSignin;
+////   statusCodes = googleSignInModule.statusCodes;
+//// } catch (e) {
+////   console.log('[GOOGLE_SIGNIN] Native module not available in Expo Go');
+//// }
+
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -56,18 +59,7 @@ const LoginScreen: React.FC = () => {
   const [biometricLoading, setBiometricLoading] = useState(false);
 
   useEffect(() => {
-    if (GoogleSignin) {
-      try {
-        GoogleSignin.configure({
-          webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
-          offlineAccess: true,
-        });
-        setGoogleAvailable(true);
-      } catch (e) {
-        console.log('[GOOGLE_SIGNIN_CONFIG] Error:', e);
-        setGoogleAvailable(false);
-      }
-    }
+    // Google Sign-In disabled for now to prevent errors.
     checkBiometricAvailability();
   }, []);
 
@@ -210,51 +202,10 @@ const LoginScreen: React.FC = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    if (!GoogleSignin || !googleAvailable) {
-      Alert.alert(
-        'Google Sign-In ไม่พร้อมใช้งาน',
-        'Google Sign-In ต้องใช้งานผ่าน Development Build หรือ Production Build\n\nใน Expo Go ไม่สามารถใช้งานได้\n\nกรุณาใช้การเข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่านแทน'
-      );
-      return;
-    }
-
-    try {
-      setGoogleLoading(true);
-      await GoogleSignin.hasPlayServices();
-      const userInfo = await GoogleSignin.signIn();
-      
-      const response = await fetch(`${baseURL}/api/auth/google`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          idToken: userInfo.idToken,
-          email: userInfo.user.email,
-          name: userInfo.user.name,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAuthToken(data.token);
-        navigation.navigate('MainTabs');
-      } else {
-        Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้');
-      }
-    } catch (error: any) {
-      if (statusCodes && error.code === statusCodes.SIGN_IN_CANCELLED) {
-        console.log('User cancelled Google sign in');
-      } else if (statusCodes && error.code === statusCodes.IN_PROGRESS) {
-        console.log('Google sign in already in progress');
-      } else if (statusCodes && error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        Alert.alert('ข้อผิดพลาด', 'Google Play Services ไม่พร้อมใช้งาน');
-      } else {
-        console.log('Google sign in error:', error);
-        Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้');
-      }
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
+    // Temporarily disabled to avoid errors
+    Alert.alert('ปิดใช้งานชั่วคราว', 'การเข้าสู่ระบบด้วย Google ถูกปิดใช้งานชั่วคราว โปรดใช้การเข้าสู่ระบบด้วยอีเมลและรหัสผ่าน');
+    return;
+  }; 
 
   const handleForgotPassword = () => {
     Alert.prompt(
@@ -357,12 +308,7 @@ const LoginScreen: React.FC = () => {
               <View style={styles.dividerLine} />
             </View>
 
-            <Button variant="outline" style={styles.googleButton} onPress={handleGoogleSignIn} loading={googleLoading} disabled={googleLoading}>
-              <View style={styles.googleButtonContent}>
-                <Ionicons name="logo-google" size={20} color={colors.foreground} />
-                <Text style={styles.googleButtonText}>Sign in with Google</Text>
-              </View>
-            </Button>
+
 
             <View style={styles.signupContainer}>
               <Text style={styles.signupText}>ยังไม่มีบัญชี? </Text>
